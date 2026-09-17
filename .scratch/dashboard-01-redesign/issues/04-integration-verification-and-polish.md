@@ -5,11 +5,10 @@ Comprehensive end-to-end integration verification and accessibility polish of th
 
 **Blocked by:** 03: Physician Suite Availability & 1-Click Lobby Dispatch Panel
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Complete admissions and dispatch workflow passes manual and automated verification without runtime errors.
-- [ ] Responsive design verified: 4 KPI cards and 2-column layout smoothly collapse to a single column on mobile/tablet screens.
-- [ ] All interactive controls (buttons, tabs, inputs, table rows) feature visible WCAG 2.1 AA focus rings.
-- [ ] Registration modal and command palette (`⌘K`) trigger cleanly from the new header and controls.
-- [ ] Production build (`next build`) and lint checks complete cleanly with zero errors.
-
+- [x] Complete admissions and dispatch workflow passes manual and automated verification without runtime errors.
+- [x] Responsive design verified: 4 KPI cards and 2-column layout smoothly collapse to a single column on mobile/tablet screens.
+- [x] All interactive controls (buttons, tabs, inputs, table rows) feature visible WCAG 2.1 AA focus rings.
+- [x] Registration modal and command palette (`⌘K`) trigger cleanly from the new header and controls.
+- [x] Production build (`next build`) and lint checks complete cleanly with zero errors.

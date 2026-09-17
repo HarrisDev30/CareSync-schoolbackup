@@ -356,10 +356,10 @@ export default function ReceptionistOverviewPage() {
       />
 
       {/* 3. MAIN DASHBOARD BODY (SHADCN DASHBOARD-01 2-COLUMN GRID) */}
-      <div className="grid gap-4 md:gap-6 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* PRIMARY 2/3 COLUMN: ADMISSIONS & TRIAGE WORKLIST / FLOW ANALYTICS */}
         <AdmissionsWorklistCard
-          className="xl:col-span-2 shadow-2xs border-slate-200/80"
+          className="lg:col-span-2 shadow-2xs border-slate-200/80"
           appointments={appointments}
           filteredQueue={filteredQueue}
           loading={loading}
@@ -383,7 +383,7 @@ export default function ReceptionistOverviewPage() {
 
         {/* SECONDARY 1/3 COLUMN: PHYSICIAN SUITES */}
         <PhysicianSuitesCard
-          className="xl:col-span-1 shadow-2xs border-slate-200/80"
+          className="lg:col-span-1 shadow-2xs border-slate-200/80"
           appointments={appointments}
           onDispatchNextToSuite={handleDispatchNextToSuite}
           onOpenChart={handleOpenChart}
