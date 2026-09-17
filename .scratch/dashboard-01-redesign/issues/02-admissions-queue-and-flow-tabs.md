@@ -5,13 +5,12 @@ The primary 2/3 column layout (`xl:col-span-2`) of the Admissions Overview conta
 
 **Blocked by:** 01: 4-Card Real-Time Triage KPI Grid
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Primary card occupies a 2/3 responsive column on large screens.
-- [ ] Card header includes view tabs toggling between "Admissions Queue" and "Flow Analytics".
-- [ ] In "Admissions Queue" view, patient rows render without text truncation or clipping.
-- [ ] Quick status filter tabs allow filtering by All, Lobby Waiting, In Room, and Completed.
-- [ ] Real-time search bar filters the queue by patient name, MRN, clinician, or indication with `⌘K` badge indicator.
-- [ ] Patients in scheduled status have a visible 1-click "Check In" action that updates their status to confirmed lobby wait.
-- [ ] In "Flow Analytics" view, the hourly outpatient flow area chart renders cleanly without layout shifts.
-
+- [x] Primary card occupies a 2/3 responsive column on large screens.
+- [x] Card header includes view tabs toggling between "Admissions Queue" and "Flow Analytics".
+- [x] In "Admissions Queue" view, patient rows render without text truncation or clipping.
+- [x] Quick status filter tabs allow filtering by All, Lobby Waiting, In Room, and Completed.
+- [x] Real-time search bar filters the queue by patient name, MRN, clinician, or indication with `⌘K` badge indicator.
+- [x] Patients in scheduled status have a visible 1-click "Check In" action that updates their status to confirmed lobby wait.
+- [x] In "Flow Analytics" view, the hourly outpatient flow area chart renders cleanly without layout shifts.

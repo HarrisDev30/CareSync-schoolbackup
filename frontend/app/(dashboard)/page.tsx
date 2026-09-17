@@ -3,30 +3,11 @@
 import React, { useState, useEffect, useMemo, useTransition } from 'react';
 import Link from 'next/link';
 import {
-  Users,
   Calendar,
-  Clock,
   UserPlus,
   CheckCircle2,
-  AlertCircle,
-  Stethoscope,
-  DoorOpen,
   Search,
-  ArrowRight,
-  ShieldCheck,
-  Building2,
-  TrendingUp,
-  FileText,
-  Activity,
-  Plus,
 } from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from 'recharts';
 import { Appointment, Patient, CreatePatientInput, StaffUser, LabOrder } from '@/types';
 import {
   fetchAppointments,
@@ -37,61 +18,13 @@ import {
   PHYSICIAN_PRESETS,
   getActiveStaffUser,
 } from '@/lib/api';
-import { TriageKpiGrid } from './_components/triage-kpi-grid';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart';
 import { CommandMenu } from '@/components/command-menu';
 import { PatientRegistrationModal } from './patients/_components/patient-registration-modal';
 import { PatientChartModal } from './patients/_components/patient-chart-modal';
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from '@/components/ui/table';
-
-const HOURLY_FLOW_DATA = [
-  { hour: '08:00', scheduled: 2, checkedIn: 2 },
-  { hour: '09:00', scheduled: 4, checkedIn: 4 },
-  { hour: '10:00', scheduled: 5, checkedIn: 4 },
-  { hour: '11:00', scheduled: 3, checkedIn: 3 },
-  { hour: '12:00', scheduled: 1, checkedIn: 1 },
-  { hour: '13:00', scheduled: 2, checkedIn: 2 },
-  { hour: '14:00', scheduled: 4, checkedIn: 2 },
-  { hour: '15:00', scheduled: 3, checkedIn: 1 },
-  { hour: '16:00', scheduled: 2, checkedIn: 0 },
-];
-
-const CHART_CONFIG = {
-  scheduled: {
-    label: 'Expected Consultations',
-    color: '#2563eb',
-  },
-  checkedIn: {
-    label: 'Checked In / Active Triage',
-    color: '#10b981',
-  },
-} satisfies ChartConfig;
+import { TriageKpiGrid } from './_components/triage-kpi-grid';
+import { AdmissionsWorklistCard } from './_components/admissions-worklist-card';
+import { PhysicianSuitesCard } from './_components/physician-suites-card';
 
 export default function ReceptionistOverviewPage() {
   const [currentStaff, setCurrentStaff] = useState<StaffUser>(getActiveStaffUser());
@@ -100,6 +33,7 @@ export default function ReceptionistOverviewPage() {
   const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterTab, setFilterTab] = useState<'ALL' | 'WAITING' | 'IN_PROGRESS' | 'COMPLETED'>('ALL');
+  const [activeView, setActiveView] = useState<'QUEUE' | 'FLOW'>('QUEUE');
   const [chartView, setChartView] = useState<'TODAY' | 'WEEK'>('TODAY');
   const [searchQuery, setSearchQuery] = useState('');
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
@@ -421,433 +355,39 @@ export default function ReceptionistOverviewPage() {
         todayStr={todayStr}
       />
 
-      {/* 3. CLINICAL SUITE STATUS & OUTPATIENT PACE (Balanced 2-Column Overview) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        {/* Physician Suites Occupancy & Instant Dispatch Board (lg:col-span-7) */}
-        <Card className="lg:col-span-7 shadow-2xs border-slate-200/80">
-          <CardHeader className="pb-3 pt-4 px-5">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-slate-700" />
-                <span>Physician Suites Occupancy</span>
-              </CardTitle>
-              <Badge variant="outline" className="font-mono text-[10px]">
-                {PHYSICIAN_PRESETS.length} Suites Active
-              </Badge>
-            </div>
-            <CardDescription className="text-xs text-slate-500">
-              Examination room occupancy and direct lobby dispatch.
-            </CardDescription>
-          </CardHeader>
+      {/* 3. MAIN DASHBOARD BODY (SHADCN DASHBOARD-01 2-COLUMN GRID) */}
+      <div className="grid gap-4 md:gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        {/* PRIMARY 2/3 COLUMN: ADMISSIONS & TRIAGE WORKLIST / FLOW ANALYTICS */}
+        <AdmissionsWorklistCard
+          className="xl:col-span-2 shadow-2xs border-slate-200/80"
+          appointments={appointments}
+          filteredQueue={filteredQueue}
+          loading={loading}
+          activeView={activeView}
+          onViewChange={setActiveView}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          filterTab={filterTab}
+          onFilterChange={setFilterTab}
+          waitingCount={waitingCount}
+          inConsultCount={inConsultCount}
+          completedCount={completedCount}
+          chartView={chartView}
+          onChartViewChange={setChartView}
+          dynamicFlowData={dynamicFlowData}
+          peakFlowInfo={peakFlowInfo}
+          onOpenChart={handleOpenChart}
+          onStatusChange={handleStatusChange}
+          onOpenCommand={() => setIsCommandOpen(true)}
+        />
 
-          <CardContent className="px-5 pb-4 pt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {PHYSICIAN_PRESETS.map((doc) => {
-                const activeConsult = appointments.find(
-                  (a) =>
-                    (a.physicianName?.toLowerCase().includes(doc.name.toLowerCase().split(' ')[1]) ||
-                      a.physicianId === doc.id) &&
-                    (a.status === 'IN_PROGRESS' || a.status === 'CONFIRMED'),
-                );
-
-                const isInConsult = activeConsult?.status === 'IN_PROGRESS';
-                const waitingForThisDoc = appointments.find(
-                  (a) =>
-                    (a.status === 'CONFIRMED' || a.status === 'SCHEDULED') &&
-                    a.physicianName?.toLowerCase().includes(doc.name.toLowerCase().split(' ')[1]),
-                );
-                const nextCandidate = waitingForThisDoc || appointments.find((a) => a.status === 'CONFIRMED');
-
-                return (
-                  <div
-                    key={doc.id}
-                    className="p-3 rounded-lg bg-slate-50/70 border border-slate-200/70 flex flex-col justify-between gap-2 hover:bg-slate-50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-1.5">
-                      <div>
-                        <div className="text-xs font-semibold text-slate-900">{doc.name}</div>
-                        <div className="text-[11px] text-slate-500 font-mono">
-                          {doc.defaultRoom} · {doc.specialty}
-                        </div>
-                      </div>
-                      <Badge
-                        variant={isInConsult ? 'purple' : 'success'}
-                        className="text-[10px] font-medium py-0 px-1.5 flex-shrink-0"
-                      >
-                        {isInConsult ? 'In Session' : 'Ready'}
-                      </Badge>
-                    </div>
-
-                    <div className="text-[11px] flex items-center justify-between pt-1.5 border-t border-slate-200/60">
-                      <span className="text-slate-400">Occupant:</span>
-                      <span className="font-medium text-slate-700 truncate max-w-[140px]">
-                        {activeConsult ? activeConsult.patientName : 'Vacant'}
-                      </span>
-                    </div>
-
-                    {!isInConsult && nextCandidate && (
-                      <Button
-                        size="sm"
-                        onClick={() => handleDispatchNextToSuite(doc.name, doc.defaultRoom)}
-                        className="w-full text-xs h-7 bg-blue-600 hover:bg-blue-700 text-white font-medium cursor-pointer active:scale-[0.98] transition-transform gap-1 mt-0.5"
-                      >
-                        <DoorOpen className="w-3 h-3" />
-                        <span className="truncate">Dispatch: {nextCandidate.patientName.split(' ')[0]}</span>
-                      </Button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Outpatient Flow Pace (lg:col-span-5) */}
-        <Card className="lg:col-span-5 shadow-2xs border-slate-200/80 flex flex-col justify-between">
-          <CardHeader className="pb-2 pt-4 px-5 flex flex-row items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-blue-600" />
-                <span>Outpatient Flow Pace</span>
-              </CardTitle>
-              <CardDescription className="text-[11px] text-slate-500 mt-0.5">
-                Scheduled vs checked-in flow.
-              </CardDescription>
-            </div>
-
-            {/* Chart View Toggle */}
-            <Tabs
-              value={chartView}
-              onValueChange={(v) => setChartView(v as any)}
-              className="w-auto"
-            >
-              <TabsList className="h-7 bg-slate-100 p-0.5 border border-slate-200/60">
-                <TabsTrigger value="TODAY" className="text-[10px] px-2 py-0.5">
-                  Today
-                </TabsTrigger>
-                <TabsTrigger value="WEEK" className="text-[10px] px-2 py-0.5">
-                  7-Day
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </CardHeader>
-
-          <CardContent className="p-4 pt-0">
-            <ChartContainer config={CHART_CONFIG} className="aspect-auto h-[140px] w-full">
-              <AreaChart
-                data={dynamicFlowData}
-                margin={{ top: 8, right: 8, left: -25, bottom: 0 }}
-              >
-                <defs>
-                  <linearGradient id="fillScheduled" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-scheduled)" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="var(--color-scheduled)" stopOpacity={0.0} />
-                  </linearGradient>
-                  <linearGradient id="fillCheckedIn" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-checkedIn)" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="var(--color-checkedIn)" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-100" />
-                <XAxis
-                  dataKey="hour"
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={5}
-                  className="text-[10px] font-mono text-slate-400"
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={5}
-                  className="text-[10px] font-mono text-slate-400"
-                />
-                <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
-                <Area
-                  type="monotone"
-                  dataKey="scheduled"
-                  stroke="var(--color-scheduled)"
-                  strokeWidth={1.5}
-                  fillOpacity={1}
-                  fill="url(#fillScheduled)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="checkedIn"
-                  stroke="var(--color-checkedIn)"
-                  strokeWidth={1.5}
-                  fillOpacity={1}
-                  fill="url(#fillCheckedIn)"
-                />
-              </AreaChart>
-            </ChartContainer>
-          </CardContent>
-
-          <div className="py-2 px-5 bg-slate-50/60 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-600"></span>
-                <span>Scheduled</span>
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span>Admitted</span>
-              </span>
-            </div>
-            <span className="font-mono text-slate-400">{peakFlowInfo}</span>
-          </div>
-        </Card>
+        {/* SECONDARY 1/3 COLUMN: PHYSICIAN SUITES */}
+        <PhysicianSuitesCard
+          className="xl:col-span-1 shadow-2xs border-slate-200/80"
+          appointments={appointments}
+          onDispatchNextToSuite={handleDispatchNextToSuite}
+        />
       </div>
-
-      {/* 4. PRIMARY ADMISSIONS & TRIAGE QUEUE (FULL 100% WIDTH NATIVE SHADCN TABLE) */}
-      <Card className="shadow-2xs border-slate-200/80">
-        <CardHeader className="pb-3 pt-4 px-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-                <span>Admissions & Triage Queue</span>
-                <Badge variant="secondary" className="font-mono text-xs">
-                  {filteredQueue.length}
-                </Badge>
-              </CardTitle>
-              <CardDescription className="text-xs text-slate-500 mt-0.5">
-                Real-time patient intake, clinician routing, and suite dispatch worklist.
-              </CardDescription>
-            </div>
-
-            {/* Linear-Style Segmented Tabs */}
-            <Tabs
-              value={filterTab}
-              onValueChange={(val) => setFilterTab(val as any)}
-              className="w-auto"
-            >
-              <TabsList className="h-8 bg-slate-100/90 p-0.5 border border-slate-200/60">
-                <TabsTrigger value="ALL" className="text-xs px-2.5 py-1">
-                  All <span className="ml-1 text-[10px] font-mono text-slate-500">({appointments.length})</span>
-                </TabsTrigger>
-                <TabsTrigger value="WAITING" className="text-xs px-2.5 py-1">
-                  Lobby <span className="ml-1 text-[10px] font-mono text-amber-700 font-semibold">({waitingCount})</span>
-                </TabsTrigger>
-                <TabsTrigger value="IN_PROGRESS" className="text-xs px-2.5 py-1">
-                  In Room <span className="ml-1 text-[10px] font-mono text-purple-700">({inConsultCount})</span>
-                </TabsTrigger>
-                <TabsTrigger value="COMPLETED" className="text-xs px-2.5 py-1">
-                  Done <span className="ml-1 text-[10px] font-mono text-emerald-700">({completedCount})</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-
-          {/* Integrated Search Bar */}
-          <div className="pt-2.5">
-            <div className="relative flex items-center">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter queue by patient name, MRN, clinician, or indication..."
-                className="pl-9 pr-14 h-9 text-xs border-slate-200 focus-visible:ring-1 focus-visible:ring-blue-500 bg-white"
-              />
-              <button
-                type="button"
-                onClick={() => setIsCommandOpen(true)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-[10px] font-mono text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors cursor-pointer"
-                title="Open Command Palette (⌘K)"
-              >
-                ⌘K
-              </button>
-            </div>
-          </div>
-        </CardHeader>
-
-        {/* WORKLIST TABLE: 100% NATIVE SHADCN TABLE (Zero Truncation, Full Data Visibility) */}
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="py-16 text-center text-xs text-slate-400">
-              Loading outpatient queue...
-            </div>
-          ) : filteredQueue.length === 0 ? (
-            <div className="py-16 text-center text-xs text-slate-400">
-              No appointments matching the selected filter.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[200px]">Patient & MRN</TableHead>
-                  <TableHead className="min-w-[260px]">Clinical Reason / Indication</TableHead>
-                  <TableHead className="w-[180px]">Assigned Doctor</TableHead>
-                  <TableHead className="w-[130px]">Suite / Room</TableHead>
-                  <TableHead className="w-[110px]">Time</TableHead>
-                  <TableHead className="w-[120px]">Status</TableHead>
-                  <TableHead className="text-right w-[170px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredQueue.map((apt) => {
-                  const isConfirmed = apt.status === 'CONFIRMED';
-                  const isInProgress = apt.status === 'IN_PROGRESS';
-                  const isScheduled = apt.status === 'SCHEDULED';
-                  const isCompleted = apt.status === 'COMPLETED';
-
-                  const initials = apt.patientName
-                    .split(' ')
-                    .map((n) => n[0])
-                    .join('')
-                    .slice(0, 2);
-
-                  return (
-                    <TableRow key={apt.id} className="hover:bg-slate-50/80 transition-colors">
-                      {/* Column 1: Patient Identity */}
-                      <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <Avatar className="h-8 w-8 border border-slate-200/80 text-xs font-semibold text-slate-700 bg-slate-100 flex-shrink-0">
-                            <AvatarFallback>{initials}</AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <div className="font-semibold text-xs text-slate-900 leading-tight">
-                              {apt.patientName}
-                            </div>
-                            <div className="font-mono text-[11px] text-slate-400 mt-0.5">
-                              {apt.mrn}
-                            </div>
-                          </div>
-                        </div>
-                      </TableCell>
-
-                      {/* Column 2: Clinical Indication (FULL TEXT, NOT TRUNCATED) */}
-                      <TableCell>
-                        <div className="text-xs text-slate-800 font-medium leading-relaxed">
-                          {apt.reason}
-                        </div>
-                        {apt.notes && (
-                          <div className="text-[11px] text-slate-400 mt-0.5">
-                            {apt.notes}
-                          </div>
-                        )}
-                      </TableCell>
-
-                      {/* Column 3: Doctor */}
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 whitespace-nowrap">
-                          <Stethoscope className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                          <span>{apt.physicianName}</span>
-                        </div>
-                      </TableCell>
-
-                      {/* Column 4: Suite / Room */}
-                      <TableCell>
-                        <span className="inline-flex items-center gap-1 font-mono text-[11px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-200/60 whitespace-nowrap">
-                          <DoorOpen className="w-3 h-3 text-purple-600 flex-shrink-0" />
-                          {apt.roomNumber || 'Exam 3B'}
-                        </span>
-                      </TableCell>
-
-                      {/* Column 5: Scheduled Time */}
-                      <TableCell className="font-mono text-xs text-slate-500 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          <span>
-                            {new Date(apt.scheduledAt).toLocaleTimeString([], {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-                      </TableCell>
-
-                      {/* Column 6: Status */}
-                      <TableCell>
-                        {isInProgress && (
-                          <Badge variant="purple" className="gap-1 text-[11px] py-0.5 whitespace-nowrap">
-                            <span className="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse"></span>
-                            In Room
-                          </Badge>
-                        )}
-                        {isConfirmed && (
-                          <Badge variant="success" className="gap-1 text-[11px] py-0.5 whitespace-nowrap">
-                            <CheckCircle2 className="w-3 h-3" />
-                            In Lobby
-                          </Badge>
-                        )}
-                        {isScheduled && (
-                          <Badge variant="outline" className="text-slate-600 text-[11px] py-0.5 whitespace-nowrap">
-                            Scheduled
-                          </Badge>
-                        )}
-                        {isCompleted && (
-                          <Badge variant="secondary" className="text-[11px] py-0.5 whitespace-nowrap">
-                            Discharged
-                          </Badge>
-                        )}
-                      </TableCell>
-
-                      {/* Column 7: Actions */}
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleOpenChart(apt)}
-                            className="h-8 px-2 text-xs text-slate-600 hover:text-slate-900 cursor-pointer"
-                            title="Open Encrypted SOAP Chart"
-                          >
-                            <FileText className="w-3.5 h-3.5 mr-1 text-slate-400" />
-                            Chart
-                          </Button>
-
-                          {isScheduled && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStatusChange(apt.id, 'CONFIRMED', apt.patientName)}
-                              className="h-8 px-2.5 text-xs text-blue-700 border-blue-200 hover:bg-blue-50 cursor-pointer shadow-2xs font-medium"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-blue-600" />
-                              Check In
-                            </Button>
-                          )}
-
-                          {isConfirmed && (
-                            <Button
-                              size="sm"
-                              onClick={() =>
-                                handleStatusChange(
-                                  apt.id,
-                                  'IN_PROGRESS',
-                                  apt.patientName,
-                                  apt.roomNumber || 'Exam Suite 3B',
-                                )
-                              }
-                              className="h-8 px-2.5 text-xs bg-purple-600 hover:bg-purple-700 text-white cursor-pointer shadow-2xs font-medium active:scale-[0.98] transition-transform"
-                            >
-                              <DoorOpen className="w-3.5 h-3.5 mr-1" />
-                              Call to Room
-                            </Button>
-                          )}
-
-                          {isInProgress && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStatusChange(apt.id, 'COMPLETED', apt.patientName)}
-                              className="h-8 px-2.5 text-xs text-emerald-700 border-emerald-200 hover:bg-emerald-50 cursor-pointer shadow-2xs font-medium active:scale-[0.98] transition-transform"
-                            >
-                              <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                              Discharge
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
 
       {/* 4. MODALS & COMMAND PALETTE */}
       <CommandMenu
