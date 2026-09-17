@@ -386,6 +386,7 @@ export default function ReceptionistOverviewPage() {
           className="xl:col-span-1 shadow-2xs border-slate-200/80"
           appointments={appointments}
           onDispatchNextToSuite={handleDispatchNextToSuite}
+          onOpenChart={handleOpenChart}
         />
       </div>
 

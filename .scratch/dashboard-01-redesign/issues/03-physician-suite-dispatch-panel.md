@@ -5,12 +5,11 @@ The secondary 1/3 column layout (`xl:col-span-1`) of the Admissions Overview pre
 
 **Blocked by:** 02: Uncluttered Admissions Queue with Progressive Flow Analytics Tab
 
-**Status:** ready-for-agent
+**Status:** completed
 
-- [ ] Secondary card occupies a 1/3 responsive column on large screens adjacent to the admissions worklist.
-- [ ] Displays all scheduled clinic physicians with their name, specialty, room number, and occupancy status.
-- [ ] Active consultations show the current occupant patient name and an "In Session" indicator.
-- [ ] Vacant suites show a "Ready" badge and, if patients are waiting in the queue, a "Dispatch Next Patient" button.
-- [ ] Clicking "Dispatch Next Patient" moves the highest-priority waiting patient into the suite and triggers a toast notification.
-- [ ] Occupancy metrics and suite states reactively sync with the top KPI cards and the admissions queue.
-
+- [x] Secondary card occupies a 1/3 responsive column on large screens adjacent to the admissions worklist.
+- [x] Displays all scheduled clinic physicians with their name, specialty, room number, and occupancy status.
+- [x] Active consultations show the current occupant patient name and an "In Session" indicator.
+- [x] Vacant suites show a "Ready" badge and, if patients are waiting in the queue, a "Dispatch Next Patient" button.
+- [x] Clicking "Dispatch Next Patient" moves the highest-priority waiting patient into the suite and triggers a toast notification.
+- [x] Occupancy metrics and suite states reactively sync with the top KPI cards and the admissions queue.
