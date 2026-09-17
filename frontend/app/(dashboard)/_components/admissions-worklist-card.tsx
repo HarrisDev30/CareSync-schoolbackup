@@ -1,15 +1,7 @@
 'use client';
 
 import React from 'react';
-import {
-  Search,
-  CheckCircle2,
-  Clock,
-  DoorOpen,
-  Stethoscope,
-  Activity,
-  FileText,
-} from 'lucide-react';
+import { Search, Activity } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -48,11 +40,11 @@ import {
 const CHART_CONFIG = {
   scheduled: {
     label: 'Expected Consultations',
-    color: '#2563eb',
+    color: '#0f172a',
   },
   checkedIn: {
-    label: 'Checked In / Active Triage',
-    color: '#10b981',
+    label: 'Admitted & Checked In',
+    color: '#64748b',
   },
 } satisfies ChartConfig;
 
@@ -108,17 +100,17 @@ export function AdmissionsWorklistCard({
 }: AdmissionsWorklistCardProps) {
   return (
     <Card className={className}>
-      <CardHeader className="pb-3 pt-4 px-5">
+      <CardHeader className="pb-4 pt-5 px-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <CardTitle className="text-base font-semibold tracking-tight text-foreground flex items-center gap-2">
               <span>Admissions & Triage</span>
-              <Badge variant="secondary" className="font-mono text-xs">
+              <Badge variant="outline" className="font-mono text-xs font-normal text-muted-foreground">
                 {filteredQueue.length}
               </Badge>
             </CardTitle>
-            <CardDescription className="text-xs text-slate-500 mt-0.5">
-              Real-time patient check-ins, physician routing, and clinic pace.
+            <CardDescription className="text-xs text-muted-foreground mt-0.5">
+              Outpatient triage worklist and clinic intake pace.
             </CardDescription>
           </div>
 
@@ -128,37 +120,37 @@ export function AdmissionsWorklistCard({
             onValueChange={(val) => onViewChange(val as 'QUEUE' | 'FLOW')}
             className="w-auto"
           >
-            <TabsList className="h-8 bg-slate-100/90 p-0.5 border border-slate-200/60">
+            <TabsList className="h-8 bg-muted p-0.5 border border-border">
               <TabsTrigger value="QUEUE" className="text-xs px-3 py-1 gap-1.5">
                 <span>Worklist</span>
-                <span className="font-mono text-[10px] text-slate-500">
+                <span className="font-mono text-[11px] text-muted-foreground">
                   ({appointments.length})
                 </span>
               </TabsTrigger>
               <TabsTrigger value="FLOW" className="text-xs px-3 py-1 gap-1.5">
-                <Activity className="w-3.5 h-3.5 text-blue-600" />
+                <Activity className="w-3.5 h-3.5 text-muted-foreground" />
                 <span>Flow Analytics</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
-        {/* WORKLIST CONTROLS (Search + Filter Tabs) */}
+        {/* WORKLIST CONTROLS: Clean Monochrome Search + Tabs */}
         {activeView === 'QUEUE' && (
           <div className="pt-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="Filter queue by patient name, MRN, clinician, or indication..."
-                className="pl-9 pr-14 h-9 text-xs border-slate-200 focus-visible:ring-1 focus-visible:ring-blue-500 bg-white"
+                placeholder="Filter by patient name, MRN, clinician..."
+                className="pl-9 pr-14 h-9 text-xs border-border bg-background shadow-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <button
                 type="button"
                 onClick={onOpenCommand}
-                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-[10px] font-mono text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors cursor-pointer"
+                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border bg-muted text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 title="Open Command Palette (⌘K)"
               >
                 ⌘K
@@ -170,40 +162,40 @@ export function AdmissionsWorklistCard({
               onValueChange={(val) => onFilterChange(val as any)}
               className="w-auto shrink-0"
             >
-              <TabsList className="h-9 bg-slate-100/90 p-0.5 border border-slate-200/60">
+              <TabsList className="h-9 bg-muted p-0.5 border border-border">
                 <TabsTrigger value="ALL" className="text-xs px-2.5 py-1">
-                  All <span className="ml-1 text-[10px] font-mono text-slate-500">({appointments.length})</span>
+                  All
                 </TabsTrigger>
-                <TabsTrigger value="WAITING" className="text-xs px-2.5 py-1 text-amber-700">
-                  Lobby <span className="ml-1 text-[10px] font-mono font-semibold">({waitingCount})</span>
+                <TabsTrigger value="WAITING" className="text-xs px-2.5 py-1">
+                  Lobby ({waitingCount})
                 </TabsTrigger>
-                <TabsTrigger value="IN_PROGRESS" className="text-xs px-2.5 py-1 text-purple-700">
-                  In Room <span className="ml-1 text-[10px] font-mono">({inConsultCount})</span>
+                <TabsTrigger value="IN_PROGRESS" className="text-xs px-2.5 py-1">
+                  In Room ({inConsultCount})
                 </TabsTrigger>
-                <TabsTrigger value="COMPLETED" className="text-xs px-2.5 py-1 text-emerald-700">
-                  Done <span className="ml-1 text-[10px] font-mono">({completedCount})</span>
+                <TabsTrigger value="COMPLETED" className="text-xs px-2.5 py-1">
+                  Done ({completedCount})
                 </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
         )}
 
-        {/* FLOW CONTROLS (Today vs 7-Day) */}
+        {/* FLOW CONTROLS */}
         {activeView === 'FLOW' && (
-          <div className="pt-2 flex items-center justify-between border-t border-slate-100 mt-2">
-            <span className="text-xs text-slate-500">
-              Outpatient hourly volume vs admitted consultations
+          <div className="pt-2 flex items-center justify-between border-t border-border mt-2">
+            <span className="text-xs text-muted-foreground">
+              Outpatient scheduled volume vs admitted consultations
             </span>
             <Tabs
               value={chartView}
               onValueChange={(v) => onChartViewChange(v as any)}
               className="w-auto"
             >
-              <TabsList className="h-7 bg-slate-100 p-0.5 border border-slate-200/60">
-                <TabsTrigger value="TODAY" className="text-[10px] px-2 py-0.5">
+              <TabsList className="h-7 bg-muted p-0.5 border border-border">
+                <TabsTrigger value="TODAY" className="text-[11px] px-2.5 py-0.5">
                   Today
                 </TabsTrigger>
-                <TabsTrigger value="WEEK" className="text-[10px] px-2 py-0.5">
+                <TabsTrigger value="WEEK" className="text-[11px] px-2.5 py-0.5">
                   7-Day
                 </TabsTrigger>
               </TabsList>
@@ -214,27 +206,35 @@ export function AdmissionsWorklistCard({
 
       <CardContent className="p-0">
         {activeView === 'QUEUE' ? (
-          /* WORKLIST TABLE */
+          /* AIRY 5-COLUMN TABLE */
           loading ? (
-            <div className="py-16 text-center text-xs text-slate-400">
-              Loading outpatient queue...
+            <div className="py-16 text-center text-xs text-muted-foreground">
+              Loading queue...
             </div>
           ) : filteredQueue.length === 0 ? (
-            <div className="py-16 text-center text-xs text-slate-400">
-              No appointments matching the selected filter.
+            <div className="py-16 text-center text-xs text-muted-foreground">
+              No matching records.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[180px]">Patient & MRN</TableHead>
-                    <TableHead className="min-w-[220px]">Indication / Reason</TableHead>
-                    <TableHead className="w-[160px]">Doctor</TableHead>
-                    <TableHead className="w-[110px]">Suite</TableHead>
-                    <TableHead className="w-[95px]">Time</TableHead>
-                    <TableHead className="w-[110px]">Status</TableHead>
-                    <TableHead className="text-right w-[160px]">Actions</TableHead>
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="w-[200px] pl-6 font-medium text-xs text-muted-foreground">
+                      Patient
+                    </TableHead>
+                    <TableHead className="min-w-[180px] font-medium text-xs text-muted-foreground">
+                      Indication
+                    </TableHead>
+                    <TableHead className="w-[160px] font-medium text-xs text-muted-foreground">
+                      Clinician
+                    </TableHead>
+                    <TableHead className="w-[100px] font-medium text-xs text-muted-foreground">
+                      Time
+                    </TableHead>
+                    <TableHead className="w-[140px] pr-6 text-right font-medium text-xs text-muted-foreground">
+                      Status
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -251,148 +251,132 @@ export function AdmissionsWorklistCard({
                       .slice(0, 2);
 
                     return (
-                      <TableRow key={apt.id} className="hover:bg-slate-50/80 transition-colors">
-                        {/* 1. Patient Identity */}
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-7 w-7 border border-slate-200/80 text-[11px] font-semibold text-slate-700 bg-slate-100 flex-shrink-0">
-                              <AvatarFallback>{initials}</AvatarFallback>
+                      <TableRow
+                        key={apt.id}
+                        onClick={() => onOpenChart(apt)}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors group"
+                        title="Click to view patient chart"
+                      >
+                        {/* 1. Patient */}
+                        <TableCell className="pl-6 py-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8 border border-border text-xs shrink-0">
+                              <AvatarFallback className="text-[10px] font-medium text-muted-foreground bg-muted">
+                                {initials}
+                              </AvatarFallback>
                             </Avatar>
                             <div className="min-w-0">
-                              <div className="font-semibold text-xs text-slate-900 leading-tight">
+                              <div className="font-medium text-xs text-foreground leading-tight truncate">
                                 {apt.patientName}
                               </div>
-                              <div className="font-mono text-[10px] text-slate-400 mt-0.5">
+                              <div className="font-mono text-[11px] text-muted-foreground mt-0.5">
                                 {apt.mrn}
                               </div>
                             </div>
                           </div>
                         </TableCell>
 
-                        {/* 2. Clinical Indication */}
-                        <TableCell>
-                          <div className="text-xs text-slate-800 font-medium leading-relaxed line-clamp-1">
+                        {/* 2. Indication */}
+                        <TableCell className="py-3">
+                          <div className="text-xs text-foreground truncate max-w-[240px]">
                             {apt.reason}
                           </div>
-                          {apt.notes && (
-                            <div className="text-[10px] text-slate-400 truncate max-w-[200px]">
-                              {apt.notes}
-                            </div>
-                          )}
                         </TableCell>
 
-                        {/* 3. Assigned Clinician */}
-                        <TableCell>
-                          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 whitespace-nowrap">
-                            <Stethoscope className="w-3.5 h-3.5 text-blue-600 flex-shrink-0" />
-                            <span>{apt.physicianName}</span>
+                        {/* 3. Clinician */}
+                        <TableCell className="py-3">
+                          <div className="text-xs text-foreground truncate">
+                            {apt.physicianName}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground font-mono">
+                            {apt.roomNumber || 'Room TBD'}
                           </div>
                         </TableCell>
 
-                        {/* 4. Suite / Room */}
-                        <TableCell>
-                          <span className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200/60 whitespace-nowrap">
-                            <DoorOpen className="w-3 h-3 text-purple-600 flex-shrink-0" />
-                            {apt.roomNumber || 'Exam 3B'}
-                          </span>
+                        {/* 4. Scheduled Time */}
+                        <TableCell className="py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(apt.scheduledAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </TableCell>
 
-                        {/* 5. Scheduled Time */}
-                        <TableCell className="font-mono text-xs text-slate-500 whitespace-nowrap">
-                          <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-slate-400" />
-                            <span>
-                              {new Date(apt.scheduledAt).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                          </div>
-                        </TableCell>
-
-                        {/* 6. Status Badge */}
-                        <TableCell>
-                          {isInProgress && (
-                            <Badge variant="purple" className="gap-1 text-[10px] py-0.5 whitespace-nowrap">
-                              <span className="w-1.5 h-1.5 rounded-full bg-purple-600 animate-pulse" />
-                              In Room
-                            </Badge>
-                          )}
-                          {isConfirmed && (
-                            <Badge variant="success" className="gap-1 text-[10px] py-0.5 whitespace-nowrap">
-                              <CheckCircle2 className="w-3 h-3" />
-                              In Lobby
-                            </Badge>
-                          )}
-                          {isScheduled && (
-                            <Badge variant="outline" className="text-slate-600 text-[10px] py-0.5 whitespace-nowrap">
-                              Scheduled
-                            </Badge>
-                          )}
-                          {isCompleted && (
-                            <Badge variant="secondary" className="text-[10px] py-0.5 whitespace-nowrap">
-                              Discharged
-                            </Badge>
-                          )}
-                        </TableCell>
-
-                        {/* 7. Action Buttons */}
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => onOpenChart(apt)}
-                              className="h-7 px-2 text-[11px] text-slate-600 hover:text-slate-900 cursor-pointer"
-                              title="Open Patient Chart"
-                            >
-                              <FileText className="w-3 h-3 mr-0.5 text-slate-400" />
-                              Chart
-                            </Button>
-
-                            {/* 1-Click Check In for Scheduled Patients */}
+                        {/* 5. Status & Contextual Hover Action */}
+                        <TableCell className="pr-6 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {/* Hover Actions: Swap or complement status on hover */}
                             {isScheduled && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => onStatusChange(apt.id, 'CONFIRMED', apt.patientName)}
-                                className="h-7 px-2 text-[11px] text-emerald-700 border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100 cursor-pointer shadow-2xs font-medium active:scale-[0.98] transition-transform"
-                              >
-                                <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" />
-                                Check In
-                              </Button>
+                              <>
+                                <span className="group-hover:hidden">
+                                  <Badge variant="outline" className="text-xs font-normal text-muted-foreground border-border">
+                                    Scheduled
+                                  </Badge>
+                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onStatusChange(apt.id, 'CONFIRMED', apt.patientName);
+                                  }}
+                                  className="hidden group-hover:inline-flex h-7 px-2 text-xs font-normal text-foreground shadow-none cursor-pointer"
+                                >
+                                  Check In
+                                </Button>
+                              </>
                             )}
 
-                            {/* Instant Call to Room for Confirmed Waiting Patients */}
                             {isConfirmed && (
-                              <Button
-                                size="sm"
-                                onClick={() =>
-                                  onStatusChange(
-                                    apt.id,
-                                    'IN_PROGRESS',
-                                    apt.patientName,
-                                    apt.roomNumber || 'Exam Suite 3B',
-                                  )
-                                }
-                                className="h-7 px-2 text-[11px] bg-purple-600 hover:bg-purple-700 text-white cursor-pointer shadow-2xs font-medium active:scale-[0.98] transition-transform"
-                              >
-                                <DoorOpen className="w-3 h-3 mr-1" />
-                                Call In
-                              </Button>
+                              <>
+                                <span className="group-hover:hidden">
+                                  <Badge variant="secondary" className="text-xs font-normal text-foreground">
+                                    In Lobby
+                                  </Badge>
+                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onStatusChange(
+                                      apt.id,
+                                      'IN_PROGRESS',
+                                      apt.patientName,
+                                      apt.roomNumber || 'Exam 3B',
+                                    );
+                                  }}
+                                  className="hidden group-hover:inline-flex h-7 px-2 text-xs font-normal text-foreground shadow-none cursor-pointer"
+                                >
+                                  Call In
+                                </Button>
+                              </>
                             )}
 
-                            {/* Instant Discharge for In-Progress Patients */}
                             {isInProgress && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => onStatusChange(apt.id, 'COMPLETED', apt.patientName)}
-                                className="h-7 px-2 text-[11px] text-emerald-700 border-emerald-200 hover:bg-emerald-50 cursor-pointer shadow-2xs font-medium active:scale-[0.98] transition-transform"
-                              >
-                                <CheckCircle2 className="w-3 h-3 mr-1 text-emerald-600" />
-                                Discharge
-                              </Button>
+                              <>
+                                <span className="group-hover:hidden">
+                                  <Badge variant="outline" className="text-xs font-medium text-foreground bg-muted/60 border-border">
+                                    In Room
+                                  </Badge>
+                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onStatusChange(apt.id, 'COMPLETED', apt.patientName);
+                                  }}
+                                  className="hidden group-hover:inline-flex h-7 px-2 text-xs font-normal text-foreground shadow-none cursor-pointer"
+                                >
+                                  Discharge
+                                </Button>
+                              </>
+                            )}
+
+                            {isCompleted && (
+                              <Badge variant="secondary" className="text-xs font-normal text-muted-foreground">
+                                Discharged
+                              </Badge>
                             )}
                           </div>
                         </TableCell>
@@ -404,8 +388,8 @@ export function AdmissionsWorklistCard({
             </div>
           )
         ) : (
-          /* FLOW ANALYTICS RECHARTS AREA CHART */
-          <div className="p-5">
+          /* CLEAN MINIMALIST FLOW ANALYTICS */
+          <div className="p-6">
             <ChartContainer config={CHART_CONFIG} className="aspect-auto h-[260px] w-full">
               <AreaChart
                 data={dynamicFlowData}
@@ -413,34 +397,34 @@ export function AdmissionsWorklistCard({
               >
                 <defs>
                   <linearGradient id="fillScheduled" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-scheduled)" stopOpacity={0.25} />
+                    <stop offset="5%" stopColor="var(--color-scheduled)" stopOpacity={0.15} />
                     <stop offset="95%" stopColor="var(--color-scheduled)" stopOpacity={0.0} />
                   </linearGradient>
                   <linearGradient id="fillCheckedIn" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-checkedIn)" stopOpacity={0.3} />
+                    <stop offset="5%" stopColor="var(--color-checkedIn)" stopOpacity={0.2} />
                     <stop offset="95%" stopColor="var(--color-checkedIn)" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-slate-100" />
+                <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border" />
                 <XAxis
                   dataKey="hour"
                   tickLine={false}
                   axisLine={false}
                   tickMargin={6}
-                  className="text-[11px] font-mono text-slate-400"
+                  className="text-[11px] font-mono text-muted-foreground"
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
                   tickMargin={6}
-                  className="text-[11px] font-mono text-slate-400"
+                  className="text-[11px] font-mono text-muted-foreground"
                 />
                 <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
                 <Area
                   type="monotone"
                   dataKey="scheduled"
                   stroke="var(--color-scheduled)"
-                  strokeWidth={2}
+                  strokeWidth={1.5}
                   fillOpacity={1}
                   fill="url(#fillScheduled)"
                 />
@@ -448,25 +432,25 @@ export function AdmissionsWorklistCard({
                   type="monotone"
                   dataKey="checkedIn"
                   stroke="var(--color-checkedIn)"
-                  strokeWidth={2}
+                  strokeWidth={1.5}
                   fillOpacity={1}
                   fill="url(#fillCheckedIn)"
                 />
               </AreaChart>
             </ChartContainer>
 
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-blue-600" />
-                  <span className="font-medium text-slate-700">Scheduled Consultations</span>
+                  <span className="h-2 w-2 rounded-full bg-slate-900" />
+                  <span className="font-medium text-foreground">Scheduled</span>
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="font-medium text-slate-700">Admitted & Checked In</span>
+                  <span className="h-2 w-2 rounded-full bg-slate-400" />
+                  <span className="font-medium text-foreground">Admitted</span>
                 </span>
               </div>
-              <span className="font-mono text-xs text-slate-500 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200/60">
+              <span className="font-mono text-xs text-muted-foreground">
                 {peakFlowInfo}
               </span>
             </div>
@@ -476,4 +460,3 @@ export function AdmissionsWorklistCard({
     </Card>
   );
 }
-

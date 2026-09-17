@@ -336,7 +336,7 @@ export default function ReceptionistOverviewPage() {
           <Button
             onClick={() => setIsRegisterModalOpen(true)}
             size="sm"
-            className="gap-1.5 shadow-xs bg-blue-600 hover:bg-blue-700 text-white h-9 cursor-pointer active:scale-[0.98] transition-transform"
+            className="gap-1.5 h-9 cursor-pointer active:scale-[0.98] transition-transform bg-slate-900 hover:bg-slate-800 text-white font-medium"
           >
             <UserPlus className="w-4 h-4" />
             <span>Register Walk-In</span>

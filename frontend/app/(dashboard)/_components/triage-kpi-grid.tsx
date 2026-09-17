@@ -26,98 +26,84 @@ export function TriageKpiGrid({
   const availableSuites = Math.max(0, totalSuites - inConsultCount);
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {/* 1. Lobby Waiting */}
-      <Card className="border-slate-200/80 shadow-2xs">
+      <Card className="border-border shadow-xs">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
             Lobby Waiting
           </CardTitle>
-          <Users className="h-4 w-4 text-amber-500" />
+          <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold font-mono text-slate-900">
+          <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
             {waitingCount}
           </div>
-          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-            <span className="font-mono text-amber-700 font-semibold">~11m avg</span>
-            <span className="text-slate-300">·</span>
-            <span>{waitingCount === 0 ? 'Lobby clear' : `${waitingCount} in waiting area`}</span>
+          <p className="text-xs text-muted-foreground mt-1">
+            {waitingCount === 0 ? 'Lobby clear' : `~11m avg wait · ${waitingCount} in waiting area`}
           </p>
         </CardContent>
       </Card>
 
       {/* 2. Active Consultations */}
-      <Card className="border-slate-200/80 shadow-2xs">
+      <Card className="border-border shadow-xs">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
             Active Consultations
           </CardTitle>
-          <Stethoscope className="h-4 w-4 text-blue-500" />
+          <Stethoscope className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold font-mono text-slate-900">
+          <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
             {inConsultCount}
-            <span className="text-sm font-normal text-slate-400"> / {totalSuites}</span>
+            <span className="text-sm font-normal text-muted-foreground"> / {totalSuites}</span>
           </div>
-          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-            <span className="font-medium text-blue-700">
-              {availableSuites === 0 ? 'All suites occupied' : `${availableSuites} suite${availableSuites > 1 ? 's' : ''} available`}
-            </span>
-            <span className="text-slate-300">·</span>
-            <span>Physician Suites</span>
+          <p className="text-xs text-muted-foreground mt-1">
+            {availableSuites === 0
+              ? 'All examination suites in session'
+              : `${availableSuites} of ${totalSuites} examination suites ready`}
           </p>
         </CardContent>
       </Card>
 
       {/* 3. Discharged Today */}
-      <Card className="border-slate-200/80 shadow-2xs">
+      <Card className="border-border shadow-xs">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
             Discharged Today
           </CardTitle>
-          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold font-mono text-slate-900">
+          <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
             {completedCount}
           </div>
-          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
-            <span className="font-medium text-emerald-700">{todayStr}</span>
-            <span className="text-slate-300">·</span>
-            <span>Completed</span>
+          <p className="text-xs text-muted-foreground mt-1">
+            {todayStr} · Completed encounters
           </p>
         </CardContent>
       </Card>
 
       {/* 4. Pending Diagnostics */}
-      <Card className="border-slate-200/80 shadow-2xs">
+      <Card className="border-border shadow-xs">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium text-slate-600">
+          <CardTitle className="text-sm font-medium text-muted-foreground">
             Pending Diagnostics
           </CardTitle>
-          <Activity className="h-4 w-4 text-purple-500" />
+          <Activity className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold font-mono text-slate-900">
+          <div className="text-2xl font-bold font-mono tracking-tight text-foreground">
             {pendingLabsCount}
           </div>
-          <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+          <p className="text-xs text-muted-foreground mt-1">
             {statLabsCount > 0 ? (
-              <>
-                <span className="font-semibold text-rose-600 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                  {statLabsCount} STAT
-                </span>
-                <span className="text-slate-300">·</span>
-                <span>Urgent review</span>
-              </>
+              <span className="text-rose-600 font-medium inline-flex items-center gap-1">
+                <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
+                {statLabsCount} STAT priority orders
+              </span>
             ) : (
-              <>
-                <span className="font-medium text-purple-700">Routine</span>
-                <span className="text-slate-300">·</span>
-                <span>All standard</span>
-              </>
+              'All standard routine orders'
             )}
           </p>
         </CardContent>
@@ -125,4 +111,3 @@ export function TriageKpiGrid({
     </div>
   );
 }
-
