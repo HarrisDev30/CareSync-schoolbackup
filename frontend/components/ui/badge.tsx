@@ -7,19 +7,19 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
 
 export function Badge({ className, variant = 'default', ...props }: BadgeProps) {
   const variants = {
-    default: 'border-transparent bg-blue-600 text-white shadow-2xs hover:bg-blue-700',
-    secondary: 'border-transparent bg-slate-100 text-slate-800 hover:bg-slate-200/80',
-    destructive: 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100',
-    success: 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100',
-    warning: 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100',
-    purple: 'border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100',
-    outline: 'border-slate-200 text-slate-700 hover:bg-slate-50',
+    default: 'border-transparent bg-primary text-primary-foreground shadow-xs hover:bg-primary/80',
+    secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
+    destructive: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',
+    success: 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    warning: 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+    purple: 'border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-400',
+    outline: 'border-border text-foreground hover:bg-muted',
   };
 
   return (
     <div
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+        'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
         variants[variant],
         className,
       )}

@@ -7,13 +7,11 @@ import {
   UserPlus,
   CheckCircle2,
   AlertCircle,
-  Users,
-  Activity,
-  Stethoscope,
   RotateCcw,
   Calendar,
 } from 'lucide-react';
 import { PatientTable } from './_components/patient-table';
+import { PatientKpiGrid } from './_components/patient-kpi-grid';
 import { PatientRegistrationModal } from './_components/patient-registration-modal';
 import { PatientChartModal } from './_components/patient-chart-modal';
 import { CommandMenu } from '@/components/command-menu';
@@ -48,7 +46,7 @@ export default function PatientsPage() {
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [selectedChartPatient, setSelectedChartPatient] = useState<Patient | null>(null);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const loadPatients = async (search?: string, bloodType?: string) => {
     const data = await fetchPatients(search, bloodType === 'ALL' ? undefined : bloodType);
@@ -103,29 +101,29 @@ export default function PatientsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5">
-      {/* Floating Toast Notification (Zero Layout Shift) */}
+    <div className="w-full space-y-6">
+      {/* Floating Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-auto">
           <div
-            className={`p-3.5 rounded-xl border shadow-lg flex items-center justify-between bg-white ${
+            className={`p-4 rounded-xl border shadow-lg flex items-center justify-between bg-card text-card-foreground ${
               toastMessage.type === 'success'
-                ? 'border-emerald-200/90 text-slate-900'
-                : 'border-red-200/90 text-slate-900'
+                ? 'border-emerald-500/30'
+                : 'border-destructive/30'
             }`}
           >
-            <div className="flex items-center gap-2.5 text-xs font-medium">
+            <div className="flex items-center gap-3 text-sm font-medium">
               {toastMessage.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
               ) : (
-                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
               )}
               <span>{toastMessage.text}</span>
             </div>
             <button
               type="button"
               onClick={() => setToastMessage(null)}
-              className="text-xs font-medium text-slate-400 hover:text-slate-700 ml-3 cursor-pointer p-0.5"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground ml-3 cursor-pointer p-1"
             >
               ✕
             </button>
@@ -133,34 +131,28 @@ export default function PatientsPage() {
         </div>
       )}
 
-      {/* 1. COMMAND HEADER (Exact match to Front Desk Overview) */}
+      {/* 1. COMMAND HEADER & ACTION STRIP */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-1">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Patient Admissions & Registry
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200/60">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              Master Patient Index
-            </span>
-          </div>
-          <p className="text-xs text-slate-500">
+        <div className="space-y-1.5">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Patient Admissions & Registry
+          </h1>
+          <p className="text-sm text-muted-foreground">
             Enterprise patient directory, clinical intake records, and demographic registry.
           </p>
         </div>
 
         {/* Global Action Group */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsCommandOpen(true)}
-            className="gap-2 text-xs text-slate-600 hover:text-slate-900 h-9 px-3 border-slate-200 shadow-2xs cursor-pointer"
+            className="gap-2 text-sm text-muted-foreground hover:text-foreground h-10 px-3.5 border-border shadow-none cursor-pointer"
           >
-            <Search className="w-3.5 h-3.5 text-slate-400" />
+            <Search className="w-4 h-4 text-muted-foreground" />
             <span className="hidden sm:inline">Search records</span>
-            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-slate-200 bg-slate-50 px-1.5 font-mono text-[10px] font-medium text-slate-500">
+            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
               ⌘K
             </kbd>
           </Button>
@@ -169,10 +161,10 @@ export default function PatientsPage() {
             variant="outline"
             size="sm"
             asChild
-            className="h-9 text-xs gap-1.5 border-slate-200 shadow-2xs"
+            className="h-10 text-sm gap-2 px-3.5 border-border shadow-none text-muted-foreground hover:text-foreground"
           >
             <Link href="/appointments">
-              <Calendar className="w-3.5 h-3.5 text-slate-500" />
+              <Calendar className="w-4 h-4 text-muted-foreground" />
               <span>Calendar</span>
             </Link>
           </Button>
@@ -180,7 +172,7 @@ export default function PatientsPage() {
           <Button
             onClick={() => setIsRegisterModalOpen(true)}
             size="sm"
-            className="gap-1.5 shadow-xs bg-blue-600 hover:bg-blue-700 text-white h-9 cursor-pointer active:scale-[0.98] transition-transform"
+            className="gap-2 h-10 px-4 cursor-pointer active:scale-[0.98] transition-transform bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
           >
             <UserPlus className="w-4 h-4" />
             <span>Register Walk-In</span>
@@ -188,159 +180,111 @@ export default function PatientsPage() {
         </div>
       </div>
 
-      {/* 2. OPERATIONAL METRICS STRIP (Exact match to Front Desk Overview) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 flex-shrink-0">
-              <Users className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-[11px] font-medium text-slate-500">Total Registered</div>
-              <div className="text-xs text-slate-700 font-medium mt-0.5">
-                Master Patient Index
-              </div>
-            </div>
-          </div>
-          <div className="text-right">
-            <span className="text-xl font-bold font-mono text-slate-900">{patients.length}</span>
-            <span className="block text-[10px] font-mono text-blue-700">Enrolled</span>
-          </div>
-        </div>
+      {/* 2. TIER 1: HERO OPERATIONAL METRICS STRIP (SHADCN DASHBOARD-01 SECTION-CARDS 1:1) */}
+      <PatientKpiGrid
+        totalPatients={patients.length}
+        activeCount={activeCount}
+        inConsultCount={inConsultCount}
+        dischargedCount={dischargedCount}
+      />
 
-        <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 flex-shrink-0">
-              <Activity className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-[11px] font-medium text-slate-500">Active in Clinic</div>
-              <div className="text-xs text-slate-700 font-medium mt-0.5">
-                {activeCount === 0 ? 'No active intake' : `${activeCount} patients in triage`}
-              </div>
-            </div>
-          </div>
-          <div className="text-right">
-            <span className="text-xl font-bold font-mono text-slate-900">{activeCount}</span>
-            <span className="block text-[10px] font-mono text-emerald-700">In waiting</span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center border border-purple-100 flex-shrink-0">
-              <Stethoscope className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-[11px] font-medium text-slate-500">In Consultation</div>
-              <div className="text-xs text-slate-700 font-medium mt-0.5">
-                Active examination
-              </div>
-            </div>
-          </div>
-          <div className="text-right">
-            <span className="text-xl font-bold font-mono text-slate-900">{inConsultCount}</span>
-            <span className="block text-[10px] font-mono text-purple-700">With physician</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. PRIMARY PATIENT DIRECTORY WORKLIST CARD (Exact match to Admissions & Triage Queue) */}
-      <Card className="shadow-2xs border-slate-200/80">
-        <CardHeader className="pb-3 pt-4 px-5">
+      {/* 3. TIER 2: PRIMARY PATIENT DIRECTORY WORKLIST CARD */}
+      <Card className="shadow-xs border-border">
+        <CardHeader className="py-5 px-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <CardTitle className="text-lg font-semibold tracking-tight text-foreground flex items-center gap-2.5">
                 <span>Patient Directory</span>
-                <Badge variant="secondary" className="font-mono text-xs">
-                  {filteredPatients.length}
+                <Badge variant="outline" className="font-mono text-xs font-medium text-muted-foreground px-2 py-0.5">
+                  {filteredPatients.length} records
                 </Badge>
               </CardTitle>
-              <CardDescription className="text-xs text-slate-500 mt-0.5">
+              <CardDescription className="text-sm text-muted-foreground mt-1">
                 Master electronic medical records, demographic profiles, and clinical charts.
               </CardDescription>
             </div>
-
-            {/* Linear-Style Segmented Tabs */}
-            <Tabs
-              value={statusFilter}
-              onValueChange={(val) => setStatusFilter(val as any)}
-              className="w-auto"
-            >
-              <TabsList className="h-8 bg-slate-100/90 p-0.5 border border-slate-200/60">
-                <TabsTrigger value="ALL" className="text-xs px-2.5 py-1">
-                  All <span className="ml-1 text-[10px] font-mono text-slate-500">({patients.length})</span>
-                </TabsTrigger>
-                <TabsTrigger value="Active" className="text-xs px-2.5 py-1">
-                  Active <span className="ml-1 text-[10px] font-mono text-emerald-700 font-semibold">({activeCount})</span>
-                </TabsTrigger>
-                <TabsTrigger value="In Consult" className="text-xs px-2.5 py-1">
-                  In Consult <span className="ml-1 text-[10px] font-mono text-purple-700">({inConsultCount})</span>
-                </TabsTrigger>
-                <TabsTrigger value="Discharged" className="text-xs px-2.5 py-1">
-                  Discharged <span className="ml-1 text-[10px] font-mono text-slate-600">({dischargedCount})</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
           </div>
 
-          {/* Integrated Search & Blood Type Filter Bar */}
-          <div className="pt-2.5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          {/* Unified Command Toolbar: Search Bar + Status Tabs + Blood Group Filter */}
+          <div className="pt-3.5 flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Filter directory by patient name, MRN, clinician, or phone..."
-                className="pl-9 pr-14 h-9 text-xs border-slate-200 focus-visible:ring-1 focus-visible:ring-blue-500 bg-white"
+                className="pl-10 pr-16 h-10 text-sm border-border bg-background shadow-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <button
                 type="button"
                 onClick={() => setIsCommandOpen(true)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-[10px] font-mono text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-colors cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-2 py-1 rounded border border-border bg-muted text-xs font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 title="Open Command Palette (⌘K)"
               >
                 ⌘K
               </button>
             </div>
 
-            <div className="w-full sm:w-44">
-              <Select value={bloodTypeFilter} onValueChange={setBloodTypeFilter}>
-                <SelectTrigger className="h-9 text-xs border-slate-200 bg-white">
-                  <SelectValue placeholder="All Blood Groups" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="ALL" className="text-xs">All Blood Types</SelectItem>
-                    <SelectItem value="A+" className="text-xs">Blood Group A+</SelectItem>
-                    <SelectItem value="A-" className="text-xs">Blood Group A-</SelectItem>
-                    <SelectItem value="B+" className="text-xs">Blood Group B+</SelectItem>
-                    <SelectItem value="B-" className="text-xs">Blood Group B-</SelectItem>
-                    <SelectItem value="AB+" className="text-xs">Blood Group AB+</SelectItem>
-                    <SelectItem value="AB-" className="text-xs">Blood Group AB-</SelectItem>
-                    <SelectItem value="O+" className="text-xs">Blood Group O+</SelectItem>
-                    <SelectItem value="O-" className="text-xs">Blood Group O-</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetFilters}
-                className="h-9 text-xs text-slate-500 hover:text-slate-800 gap-1 px-2.5 cursor-pointer"
+            <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
+              <Tabs
+                value={statusFilter}
+                onValueChange={(val) => setStatusFilter(val as any)}
+                className="w-auto shrink-0"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset</span>
-              </Button>
-            )}
+                <TabsList className="h-10 bg-muted p-1 border border-border">
+                  <TabsTrigger value="ALL" className="text-sm px-3.5 py-1.5 font-medium">
+                    All ({patients.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="Active" className="text-sm px-3.5 py-1.5 font-medium">
+                    Active ({activeCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="In Consult" className="text-sm px-3.5 py-1.5 font-medium">
+                    In Consult ({inConsultCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="Discharged" className="text-sm px-3.5 py-1.5 font-medium">
+                    Discharged ({dischargedCount})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <div className="w-full sm:w-44 shrink-0">
+                <Select value={bloodTypeFilter} onValueChange={setBloodTypeFilter}>
+                  <SelectTrigger className="h-10 text-sm border-border bg-background shadow-none">
+                    <SelectValue placeholder="All Blood Groups" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="ALL" className="text-sm">All Blood Types</SelectItem>
+                      <SelectItem value="A+" className="text-sm">Blood Group A+</SelectItem>
+                      <SelectItem value="A-" className="text-sm">Blood Group A-</SelectItem>
+                      <SelectItem value="B+" className="text-sm">Blood Group B+</SelectItem>
+                      <SelectItem value="B-" className="text-sm">Blood Group B-</SelectItem>
+                      <SelectItem value="AB+" className="text-sm">Blood Group AB+</SelectItem>
+                      <SelectItem value="AB-" className="text-sm">Blood Group AB-</SelectItem>
+                      <SelectItem value="O+" className="text-sm">Blood Group O+</SelectItem>
+                      <SelectItem value="O-" className="text-sm">Blood Group O-</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="h-10 text-xs text-muted-foreground hover:text-foreground gap-1.5 px-3 cursor-pointer shrink-0"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset</span>
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
 
-        {/* WORKLIST TABLE: 100% NATIVE SHADCN TABLE (Zero Truncation, Full Data Visibility) */}
+        {/* WORKLIST TABLE: 100% NATIVE SHADCN DATA-TABLE */}
         <CardContent className="p-0">
           <PatientTable
             patients={filteredPatients}

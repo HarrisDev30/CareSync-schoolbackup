@@ -192,20 +192,20 @@ export function CommandMenu({
         </CommandGroup>
       </CommandList>
 
-      <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2 text-[11px] text-slate-400 bg-slate-50/60 select-none">
+      <div className="flex items-center justify-between border-t border-border px-3 py-2 text-xs text-muted-foreground bg-muted/60 select-none">
         <div className="flex items-center gap-2">
           <span>Navigate</span>
-          <kbd className="px-1.5 py-0.5 rounded bg-white border border-slate-200 font-mono text-[10px] text-slate-500 shadow-2xs">
+          <kbd className="px-1.5 py-0.5 rounded bg-background border border-border font-mono text-[10px] text-muted-foreground shadow-2xs">
             ↑↓
           </kbd>
           <span className="ml-1">Select</span>
-          <kbd className="px-1.5 py-0.5 rounded bg-white border border-slate-200 font-mono text-[10px] text-slate-500 shadow-2xs">
+          <kbd className="px-1.5 py-0.5 rounded bg-background border border-border font-mono text-[10px] text-muted-foreground shadow-2xs">
             ↵
           </kbd>
         </div>
         <div className="flex items-center gap-1.5">
           <span>Dismiss</span>
-          <kbd className="px-1.5 py-0.5 rounded bg-white border border-slate-200 font-mono text-[10px] text-slate-500 shadow-2xs">
+          <kbd className="px-1.5 py-0.5 rounded bg-background border border-border font-mono text-[10px] text-muted-foreground shadow-2xs">
             esc
           </kbd>
         </div>

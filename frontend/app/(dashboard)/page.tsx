@@ -7,6 +7,7 @@ import {
   UserPlus,
   CheckCircle2,
   Search,
+  Building2,
 } from 'lucide-react';
 import { Appointment, Patient, CreatePatientInput, StaffUser, LabOrder } from '@/types';
 import {
@@ -23,8 +24,9 @@ import { CommandMenu } from '@/components/command-menu';
 import { PatientRegistrationModal } from './patients/_components/patient-registration-modal';
 import { PatientChartModal } from './patients/_components/patient-chart-modal';
 import { TriageKpiGrid } from './_components/triage-kpi-grid';
+import { InteractiveFlowChartCard } from './_components/interactive-flow-chart-card';
 import { AdmissionsWorklistCard } from './_components/admissions-worklist-card';
-import { PhysicianSuitesCard } from './_components/physician-suites-card';
+import { PhysicianSuitesDialog } from './_components/physician-suites-dialog';
 
 export default function ReceptionistOverviewPage() {
   const [currentStaff, setCurrentStaff] = useState<StaffUser>(getActiveStaffUser());
@@ -33,14 +35,14 @@ export default function ReceptionistOverviewPage() {
   const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterTab, setFilterTab] = useState<'ALL' | 'WAITING' | 'IN_PROGRESS' | 'COMPLETED'>('ALL');
-  const [activeView, setActiveView] = useState<'QUEUE' | 'FLOW'>('QUEUE');
   const [chartView, setChartView] = useState<'TODAY' | 'WEEK'>('TODAY');
   const [searchQuery, setSearchQuery] = useState('');
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isSuitesModalOpen, setIsSuitesModalOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [selectedChartPatient, setSelectedChartPatient] = useState<Patient | null>(null);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'info'; text: string } | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     setCurrentStaff(getActiveStaffUser());
@@ -144,6 +146,7 @@ export default function ReceptionistOverviewPage() {
     (a) => a.status === 'CONFIRMED' || a.status === 'SCHEDULED',
   ).length;
   const inConsultCount = appointments.filter((a) => a.status === 'IN_PROGRESS').length;
+  const availableSuites = Math.max(0, PHYSICIAN_PRESETS.length - inConsultCount);
   const completedCount = appointments.filter((a) => a.status === 'COMPLETED').length;
   const pendingLabsCount = labOrders.filter(
     (l) => l.status === 'PENDING' || l.status === 'COLLECTED' || l.status === 'PROCESSING',
@@ -160,7 +163,8 @@ export default function ReceptionistOverviewPage() {
       a.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.mrn.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      a.physicianName.toLowerCase().includes(searchQuery.toLowerCase());
+      a.physicianName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.roomNumber && a.roomNumber.toLowerCase().includes(searchQuery.toLowerCase()));
 
     if (!matchesSearch) return false;
     if (filterTab === 'WAITING') return a.status === 'CONFIRMED' || a.status === 'SCHEDULED';
@@ -198,7 +202,6 @@ export default function ReceptionistOverviewPage() {
     if (chartView === 'WEEK') {
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       return days.map((day, idx) => {
-        // Monday = 1 ... Sunday = 0
         const targetDay = idx === 6 ? 0 : idx + 1;
         const matching = appointments.filter((a) => {
           try {
@@ -259,21 +262,21 @@ export default function ReceptionistOverviewPage() {
   }, [dynamicFlowData, chartView]);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5">
-      {/* Floating Toast Notification (Zero Layout Shift) */}
+    <div className="w-full space-y-6">
+      {/* Floating Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-auto">
           <div
-            className={`p-3.5 rounded-xl border shadow-lg flex items-center justify-between bg-white ${
+            className={`p-4 rounded-xl border shadow-lg flex items-center justify-between bg-card text-card-foreground ${
               toastMessage.type === 'success'
-                ? 'border-emerald-200/90 text-slate-900'
-                : 'border-blue-200/90 text-slate-900'
+                ? 'border-emerald-500/30'
+                : 'border-border'
             }`}
           >
-            <div className="flex items-center gap-2.5 text-xs font-medium">
+            <div className="flex items-center gap-3 text-sm font-medium">
               <CheckCircle2
                 className={`w-4 h-4 flex-shrink-0 ${
-                  toastMessage.type === 'success' ? 'text-emerald-600' : 'text-blue-600'
+                  toastMessage.type === 'success' ? 'text-emerald-500' : 'text-primary'
                 }`}
               />
               <span>{toastMessage.text}</span>
@@ -281,7 +284,7 @@ export default function ReceptionistOverviewPage() {
             <button
               type="button"
               onClick={() => setToastMessage(null)}
-              className="text-xs font-medium text-slate-400 hover:text-slate-700 ml-3 cursor-pointer p-0.5"
+              className="text-xs font-medium text-muted-foreground hover:text-foreground ml-3 cursor-pointer p-1"
             >
               ✕
             </button>
@@ -289,34 +292,39 @@ export default function ReceptionistOverviewPage() {
         </div>
       )}
 
-      {/* 1. COMPACT COMMAND HEADER & TRIAGE STRIP (Zero Scroll Offset) */}
+      {/* 1. COMMAND HEADER & ACTION STRIP */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-1">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Admissions & Front Desk
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200/60">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              {currentStaff.fullName}
-            </span>
-          </div>
-          <p className="text-xs text-slate-500">
-            Live outpatient triage, patient check-in, and physician suite dispatch.
+        <div className="space-y-1.5">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Admissions & Front Desk
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Live outpatient admissions, triage worklist, and physician suite dispatch.
           </p>
         </div>
 
         {/* Global Action Group */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Quick Suites Status & Dispatch Popover/Dialog Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsSuitesModalOpen(true)}
+            className="gap-2 text-sm text-muted-foreground hover:text-foreground h-10 px-3.5 border-border shadow-none cursor-pointer"
+          >
+            <Building2 className="w-4 h-4 text-muted-foreground" />
+            <span>Suites: {availableSuites}/{PHYSICIAN_PRESETS.length} Ready</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsCommandOpen(true)}
-            className="gap-2 text-xs text-slate-600 hover:text-slate-900 h-9 px-3 border-slate-200 shadow-2xs cursor-pointer"
+            className="gap-2 text-sm text-muted-foreground hover:text-foreground h-10 px-3.5 border-border shadow-none cursor-pointer"
           >
-            <Search className="w-3.5 h-3.5 text-slate-400" />
+            <Search className="w-4 h-4 text-muted-foreground" />
             <span className="hidden sm:inline">Search records</span>
-            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-slate-200 bg-slate-50 px-1.5 font-mono text-[10px] font-medium text-slate-500">
+            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
               ⌘K
             </kbd>
           </Button>
@@ -325,10 +333,10 @@ export default function ReceptionistOverviewPage() {
             variant="outline"
             size="sm"
             asChild
-            className="h-9 text-xs gap-1.5 border-slate-200 shadow-2xs"
+            className="h-10 text-sm gap-2 px-3.5 border-border shadow-none text-muted-foreground hover:text-foreground"
           >
             <Link href="/appointments">
-              <Calendar className="w-3.5 h-3.5 text-slate-500" />
+              <Calendar className="w-4 h-4 text-muted-foreground" />
               <span>Calendar</span>
             </Link>
           </Button>
@@ -336,7 +344,7 @@ export default function ReceptionistOverviewPage() {
           <Button
             onClick={() => setIsRegisterModalOpen(true)}
             size="sm"
-            className="gap-1.5 h-9 cursor-pointer active:scale-[0.98] transition-transform bg-slate-900 hover:bg-slate-800 text-white font-medium"
+            className="gap-2 h-10 px-4 cursor-pointer active:scale-[0.98] transition-transform bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
           >
             <UserPlus className="w-4 h-4" />
             <span>Register Walk-In</span>
@@ -344,7 +352,7 @@ export default function ReceptionistOverviewPage() {
         </div>
       </div>
 
-      {/* 2. HERO OPERATIONAL TRIAGE KPIS (SHADCN DASHBOARD-01 4-CARD PATTERN) */}
+      {/* 2. TIER 1: HERO OPERATIONAL TRIAGE KPIS (SHADCN DASHBOARD-01 SECTION-CARDS 1:1) */}
       <TriageKpiGrid
         waitingCount={waitingCount}
         inConsultCount={inConsultCount}
@@ -355,42 +363,40 @@ export default function ReceptionistOverviewPage() {
         todayStr={todayStr}
       />
 
-      {/* 3. MAIN DASHBOARD BODY (SHADCN DASHBOARD-01 2-COLUMN GRID) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* PRIMARY 2/3 COLUMN: ADMISSIONS & TRIAGE WORKLIST / FLOW ANALYTICS */}
-        <AdmissionsWorklistCard
-          className="lg:col-span-2 shadow-2xs border-slate-200/80"
-          appointments={appointments}
-          filteredQueue={filteredQueue}
-          loading={loading}
-          activeView={activeView}
-          onViewChange={setActiveView}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          filterTab={filterTab}
-          onFilterChange={setFilterTab}
-          waitingCount={waitingCount}
-          inConsultCount={inConsultCount}
-          completedCount={completedCount}
-          chartView={chartView}
-          onChartViewChange={setChartView}
-          dynamicFlowData={dynamicFlowData}
-          peakFlowInfo={peakFlowInfo}
-          onOpenChart={handleOpenChart}
-          onStatusChange={handleStatusChange}
-          onOpenCommand={() => setIsCommandOpen(true)}
-        />
+      {/* 3. TIER 2: INTERACTIVE FLOW & VOLUME CHART (SHADCN DASHBOARD-01 COLLAPSIBLE AREA CHART) */}
+      <InteractiveFlowChartCard
+        chartView={chartView}
+        onChartViewChange={setChartView}
+        dynamicFlowData={dynamicFlowData}
+        peakFlowInfo={peakFlowInfo}
+      />
 
-        {/* SECONDARY 1/3 COLUMN: PHYSICIAN SUITES */}
-        <PhysicianSuitesCard
-          className="lg:col-span-1 shadow-2xs border-slate-200/80"
-          appointments={appointments}
-          onDispatchNextToSuite={handleDispatchNextToSuite}
-          onOpenChart={handleOpenChart}
-        />
-      </div>
+      {/* 4. TIER 3: FULL-WIDTH ADMISSIONS WORKLIST TABLE WITH PAGINATION (SHADCN DASHBOARD-01 DATA-TABLE) */}
+      <AdmissionsWorklistCard
+        appointments={appointments}
+        filteredQueue={filteredQueue}
+        loading={loading}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        filterTab={filterTab}
+        onFilterChange={setFilterTab}
+        waitingCount={waitingCount}
+        inConsultCount={inConsultCount}
+        completedCount={completedCount}
+        onOpenChart={handleOpenChart}
+        onStatusChange={handleStatusChange}
+        onOpenCommand={() => setIsCommandOpen(true)}
+      />
 
-      {/* 4. MODALS & COMMAND PALETTE */}
+      {/* 5. MODALS & PALETTES */}
+      <PhysicianSuitesDialog
+        open={isSuitesModalOpen}
+        onOpenChange={setIsSuitesModalOpen}
+        appointments={appointments}
+        onDispatchNextToSuite={handleDispatchNextToSuite}
+        onOpenChart={handleOpenChart}
+      />
+
       <CommandMenu
         open={isCommandOpen}
         onOpenChange={setIsCommandOpen}

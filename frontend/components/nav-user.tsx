@@ -62,7 +62,7 @@ export function NavUser({
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg border border-sidebar-border">
-                <AvatarFallback className="rounded-lg bg-blue-100 text-blue-700 font-semibold text-xs">
+                <AvatarFallback className="rounded-lg bg-muted text-foreground font-semibold text-xs">
                   {initials}
                 </AvatarFallback>
               </Avatar>
@@ -85,7 +85,7 @@ export function NavUser({
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-2 py-2 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg border">
-                  <AvatarFallback className="rounded-lg bg-blue-100 text-blue-700 font-semibold text-xs">
+                  <AvatarFallback className="rounded-lg bg-muted text-foreground font-semibold text-xs">
                     {initials}
                   </AvatarFallback>
                 </Avatar>

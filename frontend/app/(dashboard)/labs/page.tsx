@@ -234,7 +234,7 @@ export default function LabsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-5">
+    <div className="w-full space-y-6">
       {/* Floating Toast Notification (Zero Layout Shift) */}
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 max-w-sm w-full animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-auto">
@@ -267,15 +267,9 @@ export default function LabsPage() {
       {/* 1. COMMAND HEADER (Exact match to all dashboard pages) */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-1">
         <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Diagnostic Services & Lab Orders
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200/60">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              Diagnostic Command
-            </span>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Diagnostic Services & Lab Orders
+          </h1>
           <p className="text-xs text-slate-500">
             Clinical worklist, specimen tracking, priority triage, and verified laboratory findings.
           </p>

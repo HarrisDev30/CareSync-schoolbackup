@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Stethoscope,
   Lock,
-  LifeBuoy,
   FileSpreadsheet,
 } from "lucide-react"
 
@@ -29,7 +28,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Badge } from "@/components/ui/badge"
 import { StaffUser } from "@/types"
-import { STAFF_PRESETS, PHYSICIAN_PRESETS } from "@/lib/api"
+import { STAFF_PRESETS } from "@/lib/api"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   currentStaff?: StaffUser
@@ -137,27 +136,20 @@ export function AppSidebar({
     },
   ];
 
-  const careProjects = isPatient
-    ? [
-        {
-          name: "Dr. Sarah Chen, MD",
-          url: "/patient-portal?tab=appointments",
-          icon: Stethoscope,
-          badge: "Primary Physician",
-        },
-        {
-          name: "Dr. Marcus Vance, MD",
-          url: "/patient-portal?tab=appointments",
-          icon: Stethoscope,
-          badge: "Cardiology",
-        },
-      ]
-    : PHYSICIAN_PRESETS.map((doc) => ({
-        name: `${doc.defaultRoom} • ${doc.name.split(',')[0]}`,
-        url: "/appointments",
-        icon: Stethoscope,
-        badge: doc.specialty,
-      }));
+  const patientCareTeam = [
+    {
+      name: "Dr. Sarah Chen, MD",
+      url: "/patient-portal?tab=appointments",
+      icon: Stethoscope,
+      badge: "Primary Physician",
+    },
+    {
+      name: "Dr. Marcus Vance, MD",
+      url: "/patient-portal?tab=appointments",
+      icon: Stethoscope,
+      badge: "Cardiology",
+    },
+  ];
 
   const navSecondary = [
     ...(isAdmin
@@ -184,26 +176,20 @@ export function AppSidebar({
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href={isPatient ? "/patient-portal" : "/"}>
-                <div className={`flex aspect-square size-8 items-center justify-center rounded-lg text-white font-bold shadow-xs ${
-                  isPatient ? "bg-emerald-600" : "bg-blue-600"
-                }`}>
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shadow-xs">
                   <Activity className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <div className="truncate font-bold flex items-center gap-1.5 text-slate-900">
+                  <div className="truncate font-bold flex items-center gap-1.5 text-foreground">
                     <span>CareSync</span>
                     <Badge
                       variant="outline"
-                      className={`text-[9px] py-0 px-1 font-mono ${
-                        isPatient
-                          ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-                          : "text-blue-700 bg-blue-50 border-blue-200"
-                      }`}
+                      className="text-[9px] py-0 px-1 font-mono text-muted-foreground border-border"
                     >
                       {isPatient ? "PATIENT" : "INTAKE"}
                     </Badge>
                   </div>
-                  <span className="truncate text-[11px] text-muted-foreground">
+                  <span className="truncate text-xs text-muted-foreground">
                     {isPatient ? "Patient Health Portal" : "Admissions & Clinic OS"}
                   </span>
                 </div>
@@ -218,10 +204,12 @@ export function AppSidebar({
           items={isPatient ? patientNav : staffNav}
           label={isPatient ? "Patient Health Portal" : "Admissions & Clinical Care"}
         />
-        <NavProjects
-          projects={careProjects}
-          label={isPatient ? "Assigned Care Team" : "Doctor Examination Suites"}
-        />
+        {isPatient && (
+          <NavProjects
+            projects={patientCareTeam}
+            label="Assigned Care Team"
+          />
+        )}
         <NavSecondary items={navSecondary} className="mt-auto" />
       </SidebarContent>
 
