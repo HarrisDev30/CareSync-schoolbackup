@@ -4,6 +4,10 @@ import {
   Appointment,
   CreateAppointmentInput,
   LabOrder,
+  CreateDiagnosticOrderInput,
+  DiagnosticStatus,
+  DiagnosticPriority,
+  LabResultItem,
   AuditLogEntry,
   StaffUser,
   PatientVital,
@@ -828,6 +832,33 @@ export function resetAppointmentsToDefault(): Appointment[] {
   return [...INITIAL_APPOINTMENTS];
 }
 
+const LAB_ORDERS_STORAGE_KEY = 'caresync_local_lab_orders';
+
+export function getStoredLabOrders(): LabOrder[] {
+  if (typeof window === 'undefined') return [...INITIAL_LABS];
+  try {
+    const saved = localStorage.getItem(LAB_ORDERS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // Fallback
+  }
+  return [...INITIAL_LABS];
+}
+
+export function saveStoredLabOrders(orders: LabOrder[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LAB_ORDERS_STORAGE_KEY, JSON.stringify(orders));
+  } catch {
+    // Fallback
+  }
+}
+
 export async function fetchLabOrders(): Promise<LabOrder[]> {
   try {
     const token = await getValidAuthToken();
@@ -841,13 +872,262 @@ export async function fetchLabOrders(): Promise<LabOrder[]> {
       const json = await res.json();
       const items = json?.data;
       if (Array.isArray(items) && items.length > 0) {
-        return items;
+        // Map backend orders if necessary
+        const mapped: LabOrder[] = items.map((item: any) => ({
+          id: item.id,
+          orderNumber: item.orderCode || `LAB-2026-${String(item.id).slice(-4)}`,
+          patientId: item.patientId || item.patient?.id || 'p-1',
+          patientName: item.patient?.fullName || (item.patient ? `${item.patient.firstName} ${item.patient.lastName}` : 'Eleanor Vance'),
+          mrn: item.patient?.mrn || 'MRN-90214',
+          testName: item.testName || 'Comprehensive Metabolic Panel (CMP)',
+          testCategory: item.testCategory || 'General Chemistry',
+          priority: item.priority || 'ROUTINE',
+          status: item.status || 'ORDERED',
+          requestedBy: item.physician?.fullName || 'Dr. Sarah Chen, MD',
+          requestedAt: item.createdAt || new Date().toISOString(),
+          clinicalIndication: item.clinicalIndication,
+          results: item.result?.findings
+            ? Object.entries(item.result.findings).map(([key, val]: [string, any]) => ({
+                parameter: key,
+                value: String(val?.value ?? val),
+                unit: val?.unit || '',
+                referenceRange: val?.referenceRange || '',
+                isAbnormal: Boolean(val?.isAbnormal || val?.normal === false),
+                isPanicValue: Boolean(val?.isPanicValue),
+              }))
+            : undefined,
+          resultSummary: item.result?.resultSummary,
+          verifiedBy: item.result?.verifiedBy?.fullName,
+          verifiedAt: item.result?.verifiedAt,
+          reviewedBy: item.result?.reviewedBy?.fullName,
+          reviewedAt: item.result?.reviewedAt,
+        }));
+
+        // Merge with local newly created orders if any
+        const local = getStoredLabOrders();
+        const serverIds = new Set(mapped.map((m) => m.id));
+        const merged = [...mapped, ...local.filter((l) => !serverIds.has(l.id))];
+        saveStoredLabOrders(merged);
+        return merged;
       }
     }
   } catch {
     // Fallback
   }
-  return localLabs;
+  return getStoredLabOrders();
+}
+
+export async function createDiagnosticOrder(
+  input: CreateDiagnosticOrderInput,
+): Promise<{ success: boolean; data?: LabOrder; error?: string }> {
+  if (!input.patientId || !input.testName) {
+    return { success: false, error: 'Patient and diagnostic test panel are required.' };
+  }
+
+  // Attempt backend creation
+  try {
+    const physicianUser = STAFF_PRESETS.find((s) => s.role === 'PHYSICIAN') || STAFF_PRESETS[1];
+    const token = await getValidAuthToken(physicianUser);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+    const res = await fetch(`${API_BASE_URL}/diagnostics/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        patientId: input.patientId,
+        testName: input.testName,
+        priority: input.priority || 'ROUTINE',
+        clinicalIndication: input.clinicalIndication || undefined,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const json = await res.json();
+      const serverOrder = json.data;
+      const patient = localPatients.find((p) => p.id === input.patientId);
+      const newOrder: LabOrder = {
+        id: serverOrder.id || `lab-${Date.now()}`,
+        orderNumber: serverOrder.orderCode || `LAB-2026-${String(Date.now()).slice(-4)}`,
+        patientId: input.patientId,
+        patientName: patient ? patient.fullName : 'Eleanor Vance',
+        mrn: patient ? patient.mrn : 'MRN-90214',
+        testName: input.testName,
+        testCategory: input.testCategory || 'General Chemistry',
+        priority: input.priority || 'ROUTINE',
+        status: (serverOrder.status as DiagnosticStatus) || 'ORDERED',
+        requestedBy: input.physicianName || physicianUser.fullName,
+        requestedAt: serverOrder.createdAt || new Date().toISOString(),
+        clinicalIndication: input.clinicalIndication,
+      };
+
+      const current = getStoredLabOrders();
+      saveStoredLabOrders([newOrder, ...current]);
+      return { success: true, data: newOrder };
+    }
+  } catch {
+    // Local fallback
+  }
+
+  const patient = localPatients.find((p) => p.id === input.patientId) || localPatients[0];
+  const current = getStoredLabOrders();
+  const newOrder: LabOrder = {
+    id: `lab-${Date.now()}`,
+    orderNumber: `LAB-2026-${String(current.length + 905).padStart(4, '0')}`,
+    patientId: input.patientId,
+    patientName: patient ? patient.fullName : 'Eleanor Vance',
+    mrn: patient ? patient.mrn : 'MRN-90214',
+    testName: input.testName,
+    testCategory: input.testCategory || 'General Chemistry',
+    priority: input.priority || 'ROUTINE',
+    status: 'ORDERED',
+    requestedBy: input.physicianName || 'Dr. Sarah Chen, MD',
+    requestedAt: new Date().toISOString(),
+    clinicalIndication: input.clinicalIndication,
+  };
+
+  saveStoredLabOrders([newOrder, ...current]);
+  return { success: true, data: newOrder };
+}
+
+export async function updateDiagnosticOrderStatus(
+  id: string,
+  status: DiagnosticStatus,
+): Promise<{ success: boolean; data?: LabOrder }> {
+  const current = getStoredLabOrders();
+  const updated = current.map((o) => (o.id === id ? { ...o, status } : o));
+  saveStoredLabOrders(updated);
+  const found = updated.find((o) => o.id === id);
+  return { success: true, data: found };
+}
+
+export async function submitDiagnosticResult(
+  orderId: string,
+  findings: LabResultItem[],
+  resultSummary: string,
+): Promise<{ success: boolean; data?: LabOrder; error?: string }> {
+  try {
+    const labUser = STAFF_PRESETS.find((s) => s.role === 'LABORATORY_USER') || STAFF_PRESETS[2];
+    const token = await getValidAuthToken(labUser);
+    const hasAbnormal = findings.some((f) => f.isAbnormal || f.isPanicValue);
+
+    await fetch(`${API_BASE_URL}/diagnostics/orders/${orderId}/results`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        resultSummary,
+        findings: findings.reduce((acc, f) => {
+          acc[f.parameter] = {
+            value: f.value,
+            unit: f.unit,
+            referenceRange: f.referenceRange,
+            isAbnormal: f.isAbnormal,
+            isPanicValue: f.isPanicValue,
+          };
+          return acc;
+        }, {} as Record<string, any>),
+        isAbnormal: hasAbnormal,
+      }),
+    });
+  } catch {
+    // Local fallback
+  }
+
+  const current = getStoredLabOrders();
+  const updated = current.map((o) => {
+    if (o.id === orderId) {
+      return {
+        ...o,
+        status: 'RESULTED' as DiagnosticStatus,
+        results: findings,
+        resultSummary,
+      };
+    }
+    return o;
+  });
+  saveStoredLabOrders(updated);
+  const found = updated.find((o) => o.id === orderId);
+  return { success: true, data: found };
+}
+
+export async function verifyDiagnosticResult(
+  orderId: string,
+  supervisorName = 'Dr. Marcus Vance, MD (Chief of Pathology)',
+): Promise<{ success: boolean; data?: LabOrder }> {
+  try {
+    const labUser = STAFF_PRESETS.find((s) => s.role === 'LABORATORY_USER') || STAFF_PRESETS[2];
+    const token = await getValidAuthToken(labUser);
+    await fetch(`${API_BASE_URL}/diagnostics/orders/${orderId}/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  } catch {
+    // Local fallback
+  }
+
+  const current = getStoredLabOrders();
+  const updated = current.map((o) => {
+    if (o.id === orderId) {
+      return {
+        ...o,
+        status: 'VERIFIED' as DiagnosticStatus,
+        verifiedBy: supervisorName,
+        verifiedAt: new Date().toISOString(),
+      };
+    }
+    return o;
+  });
+  saveStoredLabOrders(updated);
+  const found = updated.find((o) => o.id === orderId);
+  return { success: true, data: found };
+}
+
+export async function reviewDiagnosticResult(
+  orderId: string,
+  physicianNotes: string,
+  physicianName = 'Dr. Sarah Chen, MD',
+): Promise<{ success: boolean; data?: LabOrder }> {
+  try {
+    const physicianUser = STAFF_PRESETS.find((s) => s.role === 'PHYSICIAN') || STAFF_PRESETS[1];
+    const token = await getValidAuthToken(physicianUser);
+    await fetch(`${API_BASE_URL}/diagnostics/orders/${orderId}/review`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  } catch {
+    // Local fallback
+  }
+
+  const current = getStoredLabOrders();
+  const updated = current.map((o) => {
+    if (o.id === orderId) {
+      return {
+        ...o,
+        status: 'REVIEWED' as DiagnosticStatus,
+        reviewedBy: physicianName,
+        reviewedAt: new Date().toISOString(),
+        physicianReviewNotes: physicianNotes,
+      };
+    }
+    return o;
+  });
+  saveStoredLabOrders(updated);
+  const found = updated.find((o) => o.id === orderId);
+  return { success: true, data: found };
 }
 
 export async function fetchAuditLogs(): Promise<AuditLogEntry[]> {

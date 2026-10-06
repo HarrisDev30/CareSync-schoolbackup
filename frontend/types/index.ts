@@ -72,7 +72,17 @@ export interface CreateAppointmentInput {
 }
 
 export type DiagnosticPriority = 'ROUTINE' | 'URGENT' | 'STAT';
-export type DiagnosticStatus = 'PENDING' | 'COLLECTED' | 'PROCESSING' | 'VERIFIED' | 'COMPLETED';
+export type DiagnosticStatus =
+  | 'ORDERED'
+  | 'PENDING'
+  | 'COLLECTED'
+  | 'PROCESSING'
+  | 'IN_ANALYSIS'
+  | 'RESULTED'
+  | 'VERIFIED'
+  | 'REVIEWED'
+  | 'COMPLETED'
+  | 'CANCELLED';
 
 export interface LabResultItem {
   parameter: string;
@@ -81,6 +91,16 @@ export interface LabResultItem {
   referenceRange: string;
   isAbnormal: boolean;
   isPanicValue?: boolean;
+}
+
+export interface CreateDiagnosticOrderInput {
+  patientId: string;
+  testName: string;
+  testCategory?: string;
+  priority?: DiagnosticPriority;
+  clinicalIndication?: string;
+  physicianId?: string;
+  physicianName?: string;
 }
 
 export interface LabOrder {
@@ -95,7 +115,14 @@ export interface LabOrder {
   status: DiagnosticStatus;
   requestedBy: string;
   requestedAt: string;
+  clinicalIndication?: string;
   results?: LabResultItem[];
+  resultSummary?: string;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  physicianReviewNotes?: string;
 }
 
 export interface AuditLogEntry {
