@@ -101,16 +101,16 @@
 ### 5. 📐 Project Manager & Architecture (Assignee: `@Mel Ford Batucan`)
 
 #### Card Title: `[PM-203] Telemedicine & Automated Patient Notification Specifications`
-* **Column:** `⏳ Sprint 2: To Do`
+* **Column:** `📋 Product Backlog (Deferred to Sprint 3 per Scope Alignment)`
 * **Member:** `@Mel Ford Batucan`
-* **Labels:** `PM` (Purple), `Documentation` (Gray), `Sprint-2` (Purple)
+* **Labels:** `PM` (Purple), `Documentation` (Gray), `Backlog` (Yellow)
 * **Checklist (Acceptance Criteria):**
   - [ ] Draft client requirements document for Telemedicine Video Room integration (`docs/TELEMEDICINE_SPEC.md`)
   - [ ] Define automated notification payload schema for SMS and Email appointment reminders
   - [ ] Maintain Trello sprint velocity and verify 0 stale cards across all members
   - [ ] Prepare Sprint 2 presentation slides for client review
 * **Sample Activity Comment:**  
-  *"Drafted functional requirements for patient notifications and telemedicine room links."*
+  *"Deferred to Sprint 3 to prioritize in-person clinical encounter and diagnostic verification workflows."*
 
 ---
 
@@ -133,15 +133,15 @@
 ### 7. ⚙️ DevOps Lead (Assignee: `@Luziel Artiaga`)
 
 #### Card Title: `[DEV-103] Automated Database Migration Pipeline & Daily DB Backups`
-* **Column:** `⏳ Sprint 2: To Do`
+* **Column:** `✅ Done`
 * **Member:** `@Luziel Artiaga`
 * **Labels:** `DevOps` (Blue), `Infrastructure` (Red), `Sprint-2` (Purple)
 * **Checklist (Acceptance Criteria):**
-  - [ ] Create automated PostgreSQL volume backup script in Docker environment
-  - [ ] Add database migration verification step to GitHub Actions CI (`npm run migration:run`)
-  - [ ] Ensure seamless database schema updates without data loss
+  - [x] Create automated PostgreSQL volume backup script in Docker environment (`scripts/backup-db.sh` & `scripts/backup-db.ps1`)
+  - [x] Add database migration & schema verification step to GitHub Actions CI (`.github/workflows/ci.yml`)
+  - [x] Ensure seamless database schema updates without data loss (`scripts/restore-db.sh` & `scripts/restore-db.ps1`)
 * **Sample Activity Comment:**  
-  *"Configured automated PostgreSQL dump utility for local backup container."*
+  *"Automated PostgreSQL backup and restore scripts deployed with 7-day retention and GitHub Actions CI schema validation."*
 
 ---
 

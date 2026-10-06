@@ -73,3 +73,42 @@ jobs:
           fi
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3000/api/v1
+
+  database-migration-verification:
+    name: Database Schema & Migration Verification
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: caresync
+          POSTGRES_PASSWORD: caresync_secure_password_2026
+          POSTGRES_DB: caresync_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL Client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Execute & Validate Schema SQL Initializer
+        run: |
+          PGPASSWORD=caresync_secure_password_2026 psql -h localhost -U caresync -d caresync_db -f backend/src/database/schema.sql
+          PGPASSWORD=caresync_secure_password_2026 psql -h localhost -U caresync -d caresync_db -c "\dt"
+          echo "Database schema initialized and verified successfully."
+
+      - name: Verify Automated Backup Generation Pipeline
+        run: |
+          mkdir -p ./test_backups
+          PGPASSWORD=caresync_secure_password_2026 pg_dump -h localhost -U caresync -d caresync_db --clean --if-exists | gzip > ./test_backups/caresync_ci_backup.sql.gz
+          test -s ./test_backups/caresync_ci_backup.sql.gz
+          FILE_SIZE=$(wc -c < ./test_backups/caresync_ci_backup.sql.gz)
+          echo "Verified backup artifact generated: ${FILE_SIZE} bytes."
+
