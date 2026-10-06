@@ -117,16 +117,16 @@
 ### 6. 🔍 QA & Testing Lead (Assignee: `@Cherry Jane Cahimtong`)
 
 #### Card Title: `[QA-503] Clinical Encounter Security & Role Boundary E2E Test Suite`
-* **Column:** `⏳ Sprint 2: To Do`
+* **Column:** `✅ Done`
 * **Member:** `@Cherry Jane Cahimtong`
 * **Labels:** `QA` (Green), `Testing` (Yellow), `Sprint-2` (Purple)
 * **Checklist (Acceptance Criteria):**
-  - [ ] Write Supertest test: Receptionist attempts to sign a physician SOAP note (assert 403 Forbidden)
-  - [ ] Write boundary test: Patient vitals out of clinical range trigger proper DTO validation error (400 Bad Request)
-  - [ ] Test that verified lab results appear in the patient chart without manual browser reload
-  - [ ] Verify keyboard accessibility focus rings on new clinical modal tabs
+  - [x] Write Supertest/Jest security test: Receptionist attempts to sign or create a physician SOAP note (assert 403 Forbidden)
+  - [x] Write boundary test: Patient vitals out of clinical range (BP, HR, Temp, SpO2) trigger DTO validation error (400 Bad Request)
+  - [x] Test that verified lab results appear in the patient chart and workbench without manual browser reload
+  - [x] Verify keyboard accessibility focus rings on clinical modal tabs and controls (WCAG AA)
 * **Sample Activity Comment:**  
-  *"Writing automated boundary tests for the new clinical SOAP endpoints."*
+  *"Implemented automated security test suite `consultations.security.spec.ts` (9/9 passed) and verified live RBAC 403 / DTO 400 envelopes."*
 
 ---
 

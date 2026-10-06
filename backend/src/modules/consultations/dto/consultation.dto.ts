@@ -3,10 +3,13 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
-  IsObject,
   IsNumber,
   IsEnum,
+  Min,
+  Max,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CorrectionReason } from '../../../common/constants/enums';
 
@@ -14,31 +17,43 @@ export class VitalSignsDto {
   @ApiPropertyOptional({ example: 120 })
   @IsOptional()
   @IsNumber()
+  @Min(40, { message: 'Systolic blood pressure cannot be below 40 mmHg' })
+  @Max(300, { message: 'Systolic blood pressure cannot exceed 300 mmHg' })
   bloodPressureSystolic?: number;
 
   @ApiPropertyOptional({ example: 80 })
   @IsOptional()
   @IsNumber()
+  @Min(20, { message: 'Diastolic blood pressure cannot be below 20 mmHg' })
+  @Max(200, { message: 'Diastolic blood pressure cannot exceed 200 mmHg' })
   bloodPressureDiastolic?: number;
 
   @ApiPropertyOptional({ example: 72 })
   @IsOptional()
   @IsNumber()
+  @Min(20, { message: 'Heart rate cannot be below 20 bpm' })
+  @Max(300, { message: 'Heart rate cannot exceed 300 bpm' })
   heartRate?: number;
 
   @ApiPropertyOptional({ example: 16 })
   @IsOptional()
   @IsNumber()
+  @Min(4, { message: 'Respiratory rate cannot be below 4 breaths/min' })
+  @Max(80, { message: 'Respiratory rate cannot exceed 80 breaths/min' })
   respiratoryRate?: number;
 
   @ApiPropertyOptional({ example: 36.8 })
   @IsOptional()
   @IsNumber()
+  @Min(25.0, { message: 'Temperature cannot be below 25.0°C' })
+  @Max(45.0, { message: 'Temperature cannot exceed 45.0°C' })
   temperatureCelsius?: number;
 
   @ApiPropertyOptional({ example: 98 })
   @IsOptional()
   @IsNumber()
+  @Min(50, { message: 'Oxygen saturation cannot be below 50%' })
+  @Max(100, { message: 'Oxygen saturation cannot exceed 100%' })
   oxygenSaturation?: number;
 }
 
@@ -59,7 +74,8 @@ export class CreateConsultationDto {
 
   @ApiPropertyOptional({ type: VitalSignsDto })
   @IsOptional()
-  @IsObject()
+  @ValidateNested()
+  @Type(() => VitalSignsDto)
   vitalSigns?: VitalSignsDto;
 
   @ApiProperty({ example: 'Community-acquired pneumonia' })
@@ -86,7 +102,8 @@ export class UpdateConsultationDto {
 
   @ApiPropertyOptional({ type: VitalSignsDto })
   @IsOptional()
-  @IsObject()
+  @ValidateNested()
+  @Type(() => VitalSignsDto)
   vitalSigns?: VitalSignsDto;
 
   @ApiPropertyOptional()
