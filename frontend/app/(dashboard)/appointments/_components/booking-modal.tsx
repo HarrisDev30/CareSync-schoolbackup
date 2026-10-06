@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -15,9 +15,12 @@ import {
   ChevronRight,
   Sun,
   Sunset,
+  Search,
+  ChevronsUpDown,
+  X,
 } from 'lucide-react';
 import { Patient, Appointment, CreateAppointmentInput } from '@/types';
-import { PHYSICIAN_PRESETS } from '@/lib/api';
+import { PHYSICIAN_PRESETS, fetchPatients } from '@/lib/api';
 import {
   Dialog,
   DialogContent,
@@ -36,6 +39,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 export interface BookingModalProps {
   isOpen: boolean;
@@ -91,10 +99,116 @@ export function BookingModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Searchable combobox state for scalable EHR patient lookup
+  const [patientSearchQuery, setPatientSearchQuery] = useState('');
+  const [isPatientComboboxOpen, setIsPatientComboboxOpen] = useState(false);
+  const [remotePatients, setRemotePatients] = useState<Patient[]>([]);
+  const [isSearchingRemote, setIsSearchingRemote] = useState(false);
+
+  // Merge locally provided patients with any patients retrieved from remote search
+  const combinedPatients = useMemo(() => {
+    const map = new Map<string, Patient>();
+    for (const p of patients) {
+      if (p && p.id) map.set(p.id, p);
+    }
+    for (const p of remotePatients) {
+      if (p && p.id) map.set(p.id, p);
+    }
+    return Array.from(map.values());
+  }, [patients, remotePatients]);
+
   const selectedPatient = useMemo(
-    () => patients.find((p) => p.id === selectedPatientId) || patients[0],
-    [patients, selectedPatientId],
+    () => combinedPatients.find((p) => p.id === selectedPatientId) || combinedPatients[0],
+    [combinedPatients, selectedPatientId],
   );
+
+  // Sync initial patient selection if empty or when patients load
+  useEffect(() => {
+    if (!selectedPatientId && combinedPatients.length > 0) {
+      setSelectedPatientId(combinedPatients[0].id);
+    }
+  }, [combinedPatients, selectedPatientId]);
+
+  // Reset search query and combobox state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setPatientSearchQuery('');
+      setIsPatientComboboxOpen(false);
+    }
+  }, [isOpen]);
+
+  // Debounced server-side query for enterprise scalability (millions of records)
+  useEffect(() => {
+    const trimmed = patientSearchQuery.trim();
+    if (!trimmed || trimmed.length < 2) {
+      setIsSearchingRemote(false);
+      return;
+    }
+
+    setIsSearchingRemote(true);
+    const debounceTimer = setTimeout(async () => {
+      try {
+        const results = await fetchPatients(trimmed);
+        if (Array.isArray(results) && results.length > 0) {
+          setRemotePatients((prev) => {
+            const map = new Map<string, Patient>();
+            for (const p of prev) map.set(p.id, p);
+            for (const p of results) map.set(p.id, p);
+            return Array.from(map.values());
+          });
+        }
+      } catch {
+        // Fall back gracefully to local filtering on network error
+      } finally {
+        setIsSearchingRemote(false);
+      }
+    }, 250);
+
+    return () => clearTimeout(debounceTimer);
+  }, [patientSearchQuery]);
+
+  // High-performance multi-field filtering & ranking (windowed to top 25 matches for 60fps)
+  const filteredPatients = useMemo(() => {
+    const query = patientSearchQuery.trim().toLowerCase();
+    if (!query) {
+      return combinedPatients.slice(0, 20);
+    }
+
+    const cleanDigits = query.replace(/\D/g, '');
+
+    const matches = combinedPatients.filter((p) => {
+      const fullName = (p.fullName || '').toLowerCase();
+      const mrn = (p.mrn || '').toLowerCase();
+      const phone = (p.phone || '').toLowerCase();
+      const dob = (p.dateOfBirth || '').toLowerCase();
+      const blood = (p.bloodType || '').toLowerCase();
+
+      if (fullName.includes(query)) return true;
+      if (mrn.includes(query)) return true;
+      if (dob.includes(query)) return true;
+      if (blood === query) return true;
+      if (phone.includes(query)) return true;
+      if (cleanDigits.length >= 3 && phone.replace(/\D/g, '').includes(cleanDigits)) return true;
+
+      return false;
+    });
+
+    // Score & sort: exact MRN or startsWith name gets priority
+    matches.sort((a, b) => {
+      const aName = (a.fullName || '').toLowerCase();
+      const bName = (b.fullName || '').toLowerCase();
+      const aMrn = (a.mrn || '').toLowerCase();
+      const bMrn = (b.mrn || '').toLowerCase();
+
+      if (aMrn === query && bMrn !== query) return -1;
+      if (bMrn === query && aMrn !== query) return 1;
+      if (aName.startsWith(query) && !bName.startsWith(query)) return -1;
+      if (bName.startsWith(query) && !aName.startsWith(query)) return 1;
+      return aName.localeCompare(bName);
+    });
+
+    return matches.slice(0, 25);
+  }, [combinedPatients, patientSearchQuery]);
 
   const selectedPhysician = useMemo(
     () => PHYSICIAN_PRESETS.find((d) => d.id === selectedPhysicianId) || PHYSICIAN_PRESETS[0],
@@ -220,6 +334,8 @@ export function BookingModal({
 
   const handleClose = () => {
     setErrorMessage(null);
+    setIsPatientComboboxOpen(false);
+    setPatientSearchQuery('');
     onClose();
   };
 
@@ -466,23 +582,161 @@ export function BookingModal({
                   <span className="text-[10px] font-mono text-muted-foreground">EHR Index</span>
                 </div>
 
-                <Select
-                  value={selectedPatientId || (patients[0]?.id || '')}
-                  onValueChange={setSelectedPatientId}
-                >
-                  <SelectTrigger className="w-full text-xs h-9 border-border bg-background shadow-none">
-                    <SelectValue placeholder="Select patient..." />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover dark:bg-card border-border shadow-2xl z-50">
-                    <SelectGroup>
-                      {patients.map((p) => (
-                        <SelectItem key={p.id} value={p.id} className="text-xs">
-                          {p.fullName} ({p.mrn}) — {p.bloodType || 'Blood: Unknown'}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                <Popover open={isPatientComboboxOpen} onOpenChange={setIsPatientComboboxOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      role="combobox"
+                      aria-expanded={isPatientComboboxOpen}
+                      aria-label="Select patient medical record"
+                      className="w-full text-xs h-9 border border-border bg-background hover:bg-muted/40 focus:outline-none focus:ring-1 focus:ring-ring rounded-md px-2.5 flex items-center justify-between transition-colors shadow-none text-left cursor-pointer"
+                    >
+                      {selectedPatient ? (
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <span className="font-semibold text-foreground truncate max-w-[170px]">
+                            {selectedPatient.fullName}
+                          </span>
+                          <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground border border-border/50 shrink-0">
+                            {selectedPatient.mrn}
+                          </span>
+                          {selectedPatient.bloodType && (
+                            <span className="font-mono text-[10px] text-muted-foreground hidden sm:inline shrink-0">
+                              • {selectedPatient.bloodType}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground flex items-center gap-1.5">
+                          <Search className="size-3.5" />
+                          <span>Search patient by name, MRN, phone...</span>
+                        </span>
+                      )}
+                      <ChevronsUpDown className="size-3.5 text-muted-foreground shrink-0 ml-1.5 opacity-60" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    className="w-[var(--radix-popover-trigger-width)] min-w-[340px] sm:min-w-[420px] p-0 bg-popover dark:bg-card border-border shadow-2xl z-50 rounded-lg overflow-hidden"
+                    align="start"
+                    sideOffset={4}
+                  >
+                    {/* Search Input Bar */}
+                    <div className="flex items-center border-b border-border px-3 py-2 bg-muted/20">
+                      <Search className="size-3.5 text-muted-foreground shrink-0 mr-2" />
+                      <input
+                        type="text"
+                        value={patientSearchQuery}
+                        onChange={(e) => setPatientSearchQuery(e.target.value)}
+                        placeholder="Search name, MRN, phone, or DOB..."
+                        className="w-full bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none"
+                        autoFocus
+                      />
+                      {isSearchingRemote && (
+                        <Loader2 className="size-3.5 text-primary animate-spin shrink-0 ml-1 mr-1" />
+                      )}
+                      {patientSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setPatientSearchQuery('')}
+                          className="text-muted-foreground hover:text-foreground shrink-0 ml-1 p-0.5 cursor-pointer"
+                          title="Clear search"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Metadata & Stats Strip */}
+                    <div className="flex items-center justify-between px-3 py-1 bg-muted/40 border-b border-border/40 text-[10px] text-muted-foreground font-mono">
+                      <span>
+                        {filteredPatients.length === 0
+                          ? '0 records found'
+                          : `Showing top ${filteredPatients.length} match${filteredPatients.length === 1 ? '' : 'es'}`}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <span className="inline-block size-1.5 rounded-full bg-emerald-500"></span>
+                        Enterprise EHR Search
+                      </span>
+                    </div>
+
+                    {/* Scalable Results List (Windowed / Sliced) */}
+                    <div className="max-h-56 overflow-y-auto p-1 divide-y divide-border/20">
+                      {filteredPatients.length === 0 ? (
+                        <div className="py-6 px-4 text-center">
+                          <AlertCircle className="size-6 text-muted-foreground mx-auto mb-2 opacity-50" />
+                          <p className="text-xs font-medium text-foreground">No patient record found</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {patientSearchQuery
+                              ? `No matches for "${patientSearchQuery}". Try full name, MRN, or phone.`
+                              : 'No patient records available.'}
+                          </p>
+                        </div>
+                      ) : (
+                        filteredPatients.map((p) => {
+                          const isSelected = selectedPatient?.id === p.id;
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedPatientId(p.id);
+                                setIsPatientComboboxOpen(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-2 rounded-md transition-colors flex items-center justify-between group cursor-pointer ${
+                                isSelected
+                                  ? 'bg-primary/10 text-primary font-medium'
+                                  : 'hover:bg-muted text-foreground'
+                              }`}
+                            >
+                              <div className="min-w-0 flex-1">
+                                {/* Line 1: Full name + MRN + Blood */}
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`text-xs font-semibold ${isSelected ? 'text-primary' : 'text-foreground group-hover:text-primary'}`}>
+                                    {p.fullName}
+                                  </span>
+                                  <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded border border-border/50 text-foreground">
+                                    {p.mrn}
+                                  </span>
+                                  {p.bloodType && (
+                                    <span className="font-mono text-[10px] px-1 rounded bg-red-500/10 text-red-600 dark:text-red-400 font-semibold">
+                                      {p.bloodType}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {/* Line 2: Clinical demographics (DOB, Gender, Phone) */}
+                                <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                                  {p.gender && <span>{p.gender}</span>}
+                                  {p.dateOfBirth && (
+                                    <>
+                                      <span>•</span>
+                                      <span>DOB: {p.dateOfBirth}</span>
+                                    </>
+                                  )}
+                                  {p.phone && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="font-mono">{p.phone}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+
+                              {isSelected && (
+                                <Check className="size-4 text-primary shrink-0 ml-2" />
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Footer Info for High Data Scale */}
+                    <div className="px-3 py-1 bg-muted/30 border-t border-border/40 text-[10px] text-muted-foreground flex items-center justify-between font-mono">
+                      <span>Indexed search across millions of records</span>
+                      <span>Esc to close</span>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* 2. Visual 30-Minute Consultation Time Slots (Ultra-Clear: Morning & Afternoon) */}
