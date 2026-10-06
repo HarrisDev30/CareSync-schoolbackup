@@ -200,14 +200,14 @@ export default function DashboardLayout({
           <div className="flex items-center gap-2.5">
             {/* Dark / Light Mode Toggle */}
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={toggleTheme}
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
-              title={isDark ? 'Switch to Light theme' : 'Switch to Dark theme'}
+              className="h-8 px-2.5 text-xs gap-1.5 text-muted-foreground hover:text-foreground cursor-pointer border-border shadow-none"
+              title={isDark ? 'Switch to Anti-Glare Light theme' : 'Switch to Dark theme'}
             >
-              {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-              <span className="sr-only">Toggle theme</span>
+              {isDark ? <Sun className="size-3.5 text-amber-500" /> : <Moon className="size-3.5" />}
+              <span className="hidden sm:inline font-medium">{isDark ? 'Light' : 'Dark'}</span>
             </Button>
 
             {/* Workstation Lock Button */}
