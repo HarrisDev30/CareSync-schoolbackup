@@ -171,3 +171,50 @@ export interface PatientMedication {
   status: 'Active' | 'Discontinued' | 'As Needed';
 }
 
+export interface VitalSigns {
+  bloodPressureSystolic?: number;
+  bloodPressureDiastolic?: number;
+  heartRate?: number;
+  respiratoryRate?: number;
+  temperatureCelsius?: number;
+  oxygenSaturation?: number;
+  weightKg?: number;
+  recordedAt?: string;
+  notes?: string;
+}
+
+export type ConsultationStatus = 'DRAFT' | 'FINALIZED';
+
+export interface Consultation {
+  id: string;
+  patientId: string;
+  physicianId: string;
+  physicianName?: string;
+  appointmentId?: string;
+  chiefComplaint: string;
+  vitalSigns?: VitalSigns;
+  physicalExamination?: string;
+  primaryDiagnosisDescription: string;
+  primaryDiagnosisCode?: string;
+  treatmentPlan: string;
+  status: ConsultationStatus;
+  finalizedAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateConsultationInput {
+  patientId: string;
+  appointmentId?: string;
+  physicianId?: string;
+  physicianName?: string;
+  chiefComplaint: string;
+  vitalSigns?: VitalSigns;
+  physicalExamination?: string;
+  primaryDiagnosisDescription: string;
+  primaryDiagnosisCode?: string;
+  treatmentPlan: string;
+  status?: ConsultationStatus;
+}
+
+

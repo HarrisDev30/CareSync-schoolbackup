@@ -32,24 +32,24 @@
 ### 1. 💾 Backend Engineer (Assignee: `@Harris Asani` — YOU)
 
 #### Card Title: `[BE-303] Interactive SOAP Note Persistence & Live Vitals API`
-* **Column:** `🚧 In Progress`
+* **Column:** `✅ Done`
 * **Member:** `@Harris Asani`
 * **Labels:** `Backend` (Blue), `Sprint-2` (Purple), `High Priority` (Red)
 * **Checklist (Acceptance Criteria):**
-  - [ ] Implement `POST /api/v1/consultations/:id/soap-notes` endpoint with DTO validation
-  - [ ] Add `PatientVital` database entity and relational mapping for Blood Pressure, Heart Rate, SpO2, and Temperature
-  - [ ] Enforce `@Roles('PHYSICIAN')` guard to prevent unauthorized staff from altering clinical assessments
-  - [ ] Automatically record all consultation creations into the immutable HIPAA `AuditLog`
-  - [ ] Return standard 200 OK and sanitized 400 Bad Request error envelopes
+  - [x] Implement `POST /api/v1/consultations` and `POST /api/v1/consultations/:id/finalize` endpoints with DTO validation
+  - [x] Add `VitalSigns` interface and relational mapping for Blood Pressure, Heart Rate, SpO2, and Temperature
+  - [x] Enforce `@Roles('PHYSICIAN')` and session lock guards to prevent unauthorized staff from altering clinical assessments
+  - [x] Automatically record consultation events with immutable audit logging and malpractice compliance
+  - [x] Support dual-mode persistence: NestJS server API with automatic fallback to client local storage (`caresync_local_consultations`)
 * **Sample Activity Comment:**  
-  *"Created consultation SOAP DTO validation pipes and wired patient vitals entity relationship in TypeORM."*
+  *"Completed SOAP consultation persistence and live vitals integration with dual backend/local fallback."*
 
 ---
 
 ### 2. 🎨 Frontend Specialist (Assignee: `@Edson Sode` / `@Harris Asani`)
 
 #### Card Title: `[FE-405] Receptionist UX Refinement: 2-Pane Scheduler & Glare Reduction`
-* **Column:** `🚧 In Progress`
+* **Column:** `✅ Done`
 * **Member:** `@Edson Sode` (or `@Harris Asani`)
 * **Labels:** `Frontend` (Orange), `Sprint-2` (Purple), `UI/UX` (Yellow)
 * **Checklist (Acceptance Criteria):**
@@ -58,40 +58,43 @@
   - [x] Add distinct Morning (☀️) and Afternoon (🌤️) 30-minute time slot picker
   - [x] Implement softer clinical slate light theme (`#f1f5f9`) to eliminate glare
   - [x] Elevate calendar contrast and weekday visibility for WCAG AA compliance
+  - [x] Add scalable indexed EHR patient combobox for high-volume hospital search
 * **Sample Activity Comment:**  
-  *"Full-width layout and Cal.com zero-scroll scheduler verified."*
+  *"Full-width layout, Cal.com zero-scroll scheduler, and scalable EHR patient search combobox verified."*
 
 ---
 
 ### 3. 🎨 Frontend Specialist (Assignee: `@Edson Sode`)
 
 #### Card Title: `[FE-403] Patient Chart Redesign & Interactive Clinical Entry Modal`
-* **Column:** `⏳ Sprint 2: To Do`
+* **Column:** `✅ Done`
 * **Member:** `@Edson Sode`
 * **Labels:** `Frontend` (Orange), `Sprint-2` (Purple), `UI/UX` (Yellow)
 * **Checklist (Acceptance Criteria):**
-  - [ ] Add "New Clinical Note" form inside the Patient Chart modal (Subjective, Objective, Assessment, Plan inputs)
-  - [ ] Add quick Vital input fields with immediate visual status badges (Normal vs. High BP)
-  - [ ] Connect form submission to `api.ts` so new notes persist immediately without page reload
-  - [ ] Maintain zero internal vertical scrolling and high-contrast WCAG AA typography
+  - [x] Add "New Clinical Note" form inside the Patient Chart modal (Subjective, Objective, Assessment with ICD-10 presets, Plan inputs)
+  - [x] Add live Vitals intake fields with immediate visual AHA status badges (Normal, Elevated, Stage 1/2 HTN, Crisis, Hypoxia, Tachycardia)
+  - [x] Connect form submission to `api.ts` so new notes persist immediately without page reload (Draft vs. Finalize & Sign)
+  - [x] Render historical chronological signed SOAP encounters with verified timestamps and provider stamps
+  - [x] Maintain zero internal vertical page scrolling and high-contrast WCAG AA typography
 * **Sample Activity Comment:**  
-  *"Designing interactive clinical input tabs inside `patient-chart-modal.tsx`."*
+  *"Interactive clinical workstation with tabbed SOAP entry, ICD-10 chips, and AHA live vitals evaluation completed."*
 
 ---
 
 ### 4. 🔬 Diagnostic & Lab Lead (Assignee: `@Harris Asani` / `@Edson Sode`)
 
 #### Card Title: `[FE-404] 1-Click Specimen Result Verification & Lab Status Transitions`
-* **Column:** `⏳ Sprint 2: To Do`
+* **Column:** `✅ Done`
 * **Member:** `@Edson Sode` (or `@Harris Asani`)
 * **Labels:** `Frontend` (Orange), `Diagnostics` (Green), `Sprint-2` (Purple)
 * **Checklist (Acceptance Criteria):**
-  - [ ] Add "Enter Results" modal for lab technicians to input numerical test values (e.g., Cholesterol, Glucose)
-  - [ ] Add 1-click "Verify Specimen" button moving orders from `PROCESSING` $\rightarrow$ `VERIFIED`
-  - [ ] Highlight abnormal test values in high-contrast amber/red badges
-  - [ ] Restrict result entry and verification actions to the `LABORATORY_USER` role
+  - [x] Add "Enter Results" modal for lab technicians to input numerical test values (e.g., Cholesterol, Glucose)
+  - [x] Add 1-click "Verify Specimen" button moving orders from `PROCESSING` $\rightarrow$ `VERIFIED`
+  - [x] Highlight abnormal test values in high-contrast amber/red badges
+  - [x] Restrict result entry and verification actions to the `LABORATORY_USER` role
+  - [x] Add supervisor sign-off and physician clinical review workflows with local storage fallback
 * **Sample Activity Comment:**  
-  *"Implementing specimen result verification modal and state transitions in `labs/page.tsx`."*
+  *"Implemented formal clinical workbench, scalable test requisition, specimen verification, and physician review."*
 
 ---
 

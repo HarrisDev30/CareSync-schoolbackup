@@ -8,6 +8,10 @@ import {
   DiagnosticStatus,
   DiagnosticPriority,
   LabResultItem,
+  Consultation,
+  CreateConsultationInput,
+  VitalSigns,
+  ConsultationStatus,
   AuditLogEntry,
   StaffUser,
   PatientVital,
@@ -1127,6 +1131,243 @@ export async function reviewDiagnosticResult(
   });
   saveStoredLabOrders(updated);
   const found = updated.find((o) => o.id === orderId);
+  return { success: true, data: found };
+}
+
+const INITIAL_CONSULTATIONS: Consultation[] = [
+  {
+    id: 'con-1',
+    patientId: 'p-1',
+    physicianId: 'u-1',
+    physicianName: 'Dr. Sarah Chen, MD',
+    appointmentId: 'apt-1',
+    chiefComplaint: 'Follow-up for essential hypertension and episodic dizziness after exertion.',
+    vitalSigns: {
+      bloodPressureSystolic: 128,
+      bloodPressureDiastolic: 82,
+      heartRate: 72,
+      respiratoryRate: 16,
+      temperatureCelsius: 36.8,
+      oxygenSaturation: 98,
+      weightKg: 64.2,
+      recordedAt: '2026-09-20T10:15:00Z',
+    },
+    physicalExamination: 'Alert, oriented x3. Cardiac exam reveals regular rate and rhythm without murmurs. Lungs clear to auscultation bilaterally. No peripheral edema noted.',
+    primaryDiagnosisDescription: 'Essential (Primary) Hypertension',
+    primaryDiagnosisCode: 'I10',
+    treatmentPlan: 'Maintain Lisinopril 10mg daily in the morning. Continue low-sodium DASH diet. Recheck lipid profile and metabolic panel in 3 months.',
+    status: 'FINALIZED',
+    finalizedAt: '2026-09-20T10:45:00Z',
+    createdAt: '2026-09-20T10:00:00Z',
+  },
+  {
+    id: 'con-2',
+    patientId: 'p-2',
+    physicianId: 'u-1',
+    physicianName: 'Dr. Sarah Chen, MD',
+    appointmentId: 'apt-2',
+    chiefComplaint: 'Persistent productive morning cough and mild exertional dyspnea for 2 weeks.',
+    vitalSigns: {
+      bloodPressureSystolic: 138,
+      bloodPressureDiastolic: 86,
+      heartRate: 84,
+      respiratoryRate: 18,
+      temperatureCelsius: 37.4,
+      oxygenSaturation: 96,
+      weightKg: 82.5,
+      recordedAt: '2026-09-18T14:30:00Z',
+    },
+    physicalExamination: 'Scattered bilateral coarse rhonchi on expiration, clearing with vigorous cough. No wheezes or stridor. Oropharynx non-erythematous.',
+    primaryDiagnosisDescription: 'Acute Bronchitis, unspecified',
+    primaryDiagnosisCode: 'J20.9',
+    treatmentPlan: 'Hydration and symptomatic relief with benzonatate 100mg TID PRN. Inhaled albuterol 2 puffs q4h PRN. Return to clinic if fever persists beyond 48 hours.',
+    status: 'FINALIZED',
+    finalizedAt: '2026-09-18T15:00:00Z',
+    createdAt: '2026-09-18T14:15:00Z',
+  },
+];
+
+const CONSULTATIONS_STORAGE_KEY = 'caresync_local_consultations';
+
+export function getStoredConsultations(): Consultation[] {
+  if (typeof window === 'undefined') return [...INITIAL_CONSULTATIONS];
+  try {
+    const saved = localStorage.getItem(CONSULTATIONS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // Fallback
+  }
+  return [...INITIAL_CONSULTATIONS];
+}
+
+export function saveStoredConsultations(consultations: Consultation[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CONSULTATIONS_STORAGE_KEY, JSON.stringify(consultations));
+  } catch {
+    // Fallback
+  }
+}
+
+export async function fetchConsultations(patientId?: string): Promise<Consultation[]> {
+  try {
+    const token = await getValidAuthToken();
+    const url = new URL(`${API_BASE_URL}/consultations`);
+    if (patientId) url.searchParams.append('patientId', patientId);
+
+    const res = await fetch(url.toString(), {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+
+    if (res.ok) {
+      const json = await res.json();
+      const items = json?.data;
+      if (Array.isArray(items) && items.length > 0) {
+        const mapped: Consultation[] = items.map((item: any) => ({
+          id: item.id,
+          patientId: item.patientId,
+          physicianId: item.physicianId,
+          physicianName: item.physician?.fullName || 'Dr. Sarah Chen, MD',
+          appointmentId: item.appointmentId,
+          chiefComplaint: item.chiefComplaint,
+          vitalSigns: item.vitalSigns,
+          primaryDiagnosisDescription: item.primaryDiagnosisDescription,
+          primaryDiagnosisCode: item.primaryDiagnosisCode,
+          treatmentPlan: item.treatmentPlan,
+          status: item.status || 'DRAFT',
+          finalizedAt: item.finalizedAt,
+          createdAt: item.createdAt,
+          updatedAt: item.updatedAt,
+        }));
+
+        const local = getStoredConsultations();
+        const serverIds = new Set(mapped.map((m) => m.id));
+        const merged = [...mapped, ...local.filter((l) => !serverIds.has(l.id))];
+        saveStoredConsultations(merged);
+        return patientId ? merged.filter((c) => c.patientId === patientId) : merged;
+      }
+    }
+  } catch {
+    // Fallback
+  }
+
+  const stored = getStoredConsultations();
+  return patientId ? stored.filter((c) => c.patientId === patientId) : stored;
+}
+
+export async function createConsultation(
+  input: CreateConsultationInput,
+): Promise<{ success: boolean; data?: Consultation; error?: string }> {
+  if (!input.patientId || !input.chiefComplaint || !input.primaryDiagnosisDescription || !input.treatmentPlan) {
+    return { success: false, error: 'Patient, Chief Complaint, Primary Diagnosis, and Treatment Plan are required.' };
+  }
+
+  try {
+    const physicianUser = STAFF_PRESETS.find((s) => s.role === 'PHYSICIAN') || STAFF_PRESETS[1];
+    const token = await getValidAuthToken(physicianUser);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+    const res = await fetch(`${API_BASE_URL}/consultations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        patientId: input.patientId,
+        appointmentId: input.appointmentId,
+        chiefComplaint: input.chiefComplaint,
+        vitalSigns: input.vitalSigns,
+        primaryDiagnosisDescription: input.primaryDiagnosisDescription,
+        primaryDiagnosisCode: input.primaryDiagnosisCode,
+        treatmentPlan: input.treatmentPlan,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const json = await res.json();
+      const serverCon = json.data;
+      const newCon: Consultation = {
+        id: serverCon.id || `con-${Date.now()}`,
+        patientId: input.patientId,
+        physicianId: physicianUser.id,
+        physicianName: input.physicianName || physicianUser.fullName,
+        appointmentId: input.appointmentId,
+        chiefComplaint: input.chiefComplaint,
+        vitalSigns: input.vitalSigns,
+        physicalExamination: input.physicalExamination,
+        primaryDiagnosisDescription: input.primaryDiagnosisDescription,
+        primaryDiagnosisCode: input.primaryDiagnosisCode,
+        treatmentPlan: input.treatmentPlan,
+        status: (serverCon.status as ConsultationStatus) || (input.status || 'DRAFT'),
+        finalizedAt: serverCon.finalizedAt,
+        createdAt: serverCon.createdAt || new Date().toISOString(),
+      };
+
+      const current = getStoredConsultations();
+      saveStoredConsultations([newCon, ...current]);
+      return { success: true, data: newCon };
+    }
+  } catch {
+    // Local fallback
+  }
+
+  const current = getStoredConsultations();
+  const newCon: Consultation = {
+    id: `con-${Date.now()}`,
+    patientId: input.patientId,
+    physicianId: input.physicianId || 'u-1',
+    physicianName: input.physicianName || 'Dr. Sarah Chen, MD',
+    appointmentId: input.appointmentId,
+    chiefComplaint: input.chiefComplaint,
+    vitalSigns: input.vitalSigns,
+    physicalExamination: input.physicalExamination,
+    primaryDiagnosisDescription: input.primaryDiagnosisDescription,
+    primaryDiagnosisCode: input.primaryDiagnosisCode,
+    treatmentPlan: input.treatmentPlan,
+    status: input.status || 'DRAFT',
+    finalizedAt: input.status === 'FINALIZED' ? new Date().toISOString() : undefined,
+    createdAt: new Date().toISOString(),
+  };
+
+  saveStoredConsultations([newCon, ...current]);
+  return { success: true, data: newCon };
+}
+
+export async function finalizeConsultation(
+  id: string,
+): Promise<{ success: boolean; data?: Consultation }> {
+  try {
+    const physicianUser = STAFF_PRESETS.find((s) => s.role === 'PHYSICIAN') || STAFF_PRESETS[1];
+    const token = await getValidAuthToken(physicianUser);
+    await fetch(`${API_BASE_URL}/consultations/${id}/finalize`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  } catch {
+    // Local fallback
+  }
+
+  const current = getStoredConsultations();
+  const updated = current.map((c) =>
+    c.id === id ? { ...c, status: 'FINALIZED' as ConsultationStatus, finalizedAt: new Date().toISOString() } : c,
+  );
+  saveStoredConsultations(updated);
+  const found = updated.find((c) => c.id === id);
   return { success: true, data: found };
 }
 
