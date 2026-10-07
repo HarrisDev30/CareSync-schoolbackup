@@ -19,6 +19,12 @@ import {
   PatientStatus,
   CreatePrescriptionInput,
   DischargeSummary,
+  HospitalRoom,
+  CreateRoomInput,
+  UpdateRoomInput,
+  RoomWing,
+  RoomStatus,
+  RoomType,
 } from '../types';
 
 export const STAFF_PRESETS: StaffUser[] = [
@@ -81,20 +87,37 @@ export const PHYSICIAN_PRESETS: PhysicianPreset[] = [
   {
     id: 'u-1',
     name: 'Dr. Sarah Chen, MD',
-    department: 'General Practice',
-    specialty: 'General Practice',
+    department: 'Outpatient Clinic',
+    specialty: 'General Practice & Internal Med',
     email: 'sarah.chen@caresync.org',
     defaultRoom: 'Exam Suite 3B',
   },
   {
     id: 'u-2',
     name: 'Dr. Marcus Vance, MD',
-    department: 'Cardiology',
-    specialty: 'Cardiology',
+    department: 'Cardiology & Specialty',
+    specialty: 'Interventional Cardiology',
     email: 'marcus.vance@caresync.org',
-    defaultRoom: 'Cardiology 1A',
+    defaultRoom: 'Cardiology Suite 1A',
+  },
+  {
+    id: 'u-6',
+    name: 'Dr. Olivia Bennett, MD',
+    department: 'Cardiology & Specialty',
+    specialty: 'Obstetrics & Gynecology',
+    email: 'olivia.bennett@caresync.org',
+    defaultRoom: 'OBGYN Suite 2C',
+  },
+  {
+    id: 'u-4',
+    name: 'Elena Rostova, CLS',
+    department: 'Diagnostic Laboratory',
+    specialty: 'Clinical Pathology & Biomarkers',
+    email: 'elena.rostova@caresync.org',
+    defaultRoom: 'STAT Biomarkers Bench',
   },
 ];
+
 
 const INITIAL_PATIENTS: Patient[] = [
   {
@@ -478,10 +501,7 @@ export async function setActiveStaffUser(user: StaffUser): Promise<string | null
 export async function getValidAuthToken(targetUser?: StaffUser): Promise<string | null> {
   if (typeof window === 'undefined') return null;
   const user = targetUser || getActiveStaffUser();
-  const cachedToken = localStorage.getItem('caresync_token');
-  if (cachedToken) return cachedToken;
-
-  const password = user.email.startsWith('admin') ? 'AdminSecret123!' : 'Password123!';
+  const password = 'CareSync@2026!';
 
   try {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -1689,4 +1709,468 @@ export async function dischargePatient(
 
   return { success: true, data: fullSummary };
 }
+
+// ---------------------------------------------------------------------------
+// Hospital Census & Analytics Telemetry APIs [BE-401]
+// ---------------------------------------------------------------------------
+
+export interface WingCensusData {
+  name: string;
+  total: number;
+  inUse: number;
+  available: number;
+  sanitizing: number;
+  statEmergency: number;
+  occupancyRate: number;
+}
+
+export interface HospitalCensusData {
+  totalRooms: number;
+  inUseCount: number;
+  availableCount: number;
+  sanitizingCount: number;
+  statEmergencyCount: number;
+  occupancyRatePercent: number;
+  wings: WingCensusData[];
+}
+
+export interface HospitalMetricsData {
+  todayPatientIntake: number;
+  totalRegisteredPatients: number;
+  activeWaitingQueue: number;
+  inConsultationCount: number;
+  completedConsultationsToday: number;
+  criticalLabAlertsCount: number;
+  averageConsultationDurationMinutes: number;
+}
+
+export interface DiagnosticTatData {
+  overallMeanTatMinutes: number;
+  statEmergencyMeanTatMinutes: number;
+  routineMeanTatMinutes: number;
+  totalOrdersCount: number;
+  verifiedOrdersCount: number;
+  targetComplianceRatePercent: number;
+  volumeByCategory: Record<string, number>;
+}
+
+export async function fetchHospitalCensus(): Promise<HospitalCensusData> {
+  const defaultCensus: HospitalCensusData = {
+    totalRooms: 11,
+    inUseCount: 6,
+    availableCount: 3,
+    sanitizingCount: 1,
+    statEmergencyCount: 1,
+    occupancyRatePercent: 63.6,
+    wings: [
+      {
+        name: 'Outpatient Clinic',
+        total: 4,
+        inUse: 2,
+        available: 1,
+        sanitizing: 1,
+        statEmergency: 0,
+        occupancyRate: 50.0,
+      },
+      {
+        name: 'Cardiology & Specialty',
+        total: 3,
+        inUse: 2,
+        available: 1,
+        sanitizing: 0,
+        statEmergency: 0,
+        occupancyRate: 66.7,
+      },
+      {
+        name: 'Diagnostic Laboratory',
+        total: 4,
+        inUse: 2,
+        available: 1,
+        sanitizing: 0,
+        statEmergency: 1,
+        occupancyRate: 75.0,
+      },
+    ],
+  };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/analytics/census`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data) return json.data;
+    }
+  } catch {
+    // fallback
+  }
+  return defaultCensus;
+}
+
+export async function fetchHospitalMetrics(): Promise<HospitalMetricsData> {
+  const defaultMetrics: HospitalMetricsData = {
+    todayPatientIntake: 14,
+    totalRegisteredPatients: localPatients.length || 8,
+    activeWaitingQueue: 3,
+    inConsultationCount: 3,
+    completedConsultationsToday: 7,
+    criticalLabAlertsCount: 2,
+    averageConsultationDurationMinutes: 22.5,
+  };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/analytics/metrics`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data) return json.data;
+    }
+  } catch {
+    // fallback
+  }
+  return defaultMetrics;
+}
+
+export async function fetchDiagnosticTat(): Promise<DiagnosticTatData> {
+  const defaultTat: DiagnosticTatData = {
+    overallMeanTatMinutes: 24.6,
+    statEmergencyMeanTatMinutes: 11.2,
+    routineMeanTatMinutes: 38.0,
+    totalOrdersCount: 45,
+    verifiedOrdersCount: 38,
+    targetComplianceRatePercent: 96.2,
+    volumeByCategory: {
+      'Clinical Chemistry': 26,
+      Hematology: 18,
+      'Cardiac Biomarkers': 9,
+      Coagulation: 6,
+    },
+  };
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/analytics/diagnostic-tat`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json.data) return json.data;
+    }
+  } catch {
+    // fallback
+  }
+  return defaultTat;
+}
+
+export const ROOMS_STORAGE_KEY = 'caresync_hospital_rooms_v2';
+
+export const DEFAULT_HOSPITAL_ROOMS: HospitalRoom[] = [
+  {
+    id: 'r-1',
+    roomNumber: 'Exam Suite 3B',
+    wing: 'Outpatient Clinic',
+    status: 'IN_USE',
+    roomType: 'Examination Suite',
+    floor: 'Floor 1 - Outpatient Wing',
+    bedCount: 1,
+    bedType: 'Consultation Bed',
+    assignedDoctor: 'Dr. Sarah Chen, MD',
+    assignedPatient: 'Eleanor Vance',
+    patientId: 'p-1',
+    mrn: 'MRN-90214',
+    reason: 'Hypertension Follow-Up & Lisinopril Review',
+    elapsedMinutes: 18,
+    expectedDurationMinutes: 30,
+    equipment: ['Vital Signs Monitor', 'ECG Lead', 'Negative Pressure'],
+  },
+  {
+    id: 'r-2',
+    roomNumber: 'Exam Suite 4A',
+    wing: 'Outpatient Clinic',
+    status: 'AVAILABLE',
+    roomType: 'Examination Suite',
+    floor: 'Floor 1 - Outpatient Wing',
+    bedCount: 1,
+    bedType: 'Standard Exam Table',
+    equipment: ['Vital Signs Monitor', 'Ophthalmoscope'],
+  },
+  {
+    id: 'r-3',
+    roomNumber: 'Consultation Suite 2A',
+    wing: 'Outpatient Clinic',
+    status: 'IN_USE',
+    roomType: 'Consultation Room',
+    floor: 'Floor 1 - Outpatient Wing',
+    bedCount: 1,
+    bedType: 'Endocrine Suite Recliner',
+    assignedDoctor: 'Dr. Sarah Chen, MD',
+    assignedPatient: 'Arthur Pendelton',
+    patientId: 'p-4',
+    mrn: 'MRN-74199',
+    reason: 'Type 2 Diabetes HbA1c Glycemic Review',
+    elapsedMinutes: 14,
+    expectedDurationMinutes: 30,
+    equipment: ['Glucometer Pro', 'Vital Signs Monitor'],
+  },
+  {
+    id: 'r-4',
+    roomNumber: 'Triage Room 1B',
+    wing: 'Outpatient Clinic',
+    status: 'SANITIZING',
+    roomType: 'Triage Bay',
+    floor: 'Floor 1 - Admissions Concourse',
+    bedCount: 1,
+    bedType: 'Triage Bay',
+    elapsedMinutes: 4,
+    expectedDurationMinutes: 10,
+    equipment: ['Rapid Vitals Station', 'Automated Triage Terminal'],
+  },
+  {
+    id: 'r-5',
+    roomNumber: 'Cardiology Suite 1A',
+    wing: 'Cardiology & Specialty',
+    status: 'IN_USE',
+    roomType: 'Examination Suite',
+    floor: 'Floor 2 - Specialty Pavilion',
+    bedCount: 1,
+    bedType: 'Telemetry Recliner',
+    assignedDoctor: 'Dr. Marcus Vance, MD',
+    assignedPatient: 'Marcus Aurelius Jenkins',
+    patientId: 'p-2',
+    mrn: 'MRN-88401',
+    reason: 'Post-Catheterization Evaluation & Access Check',
+    elapsedMinutes: 32,
+    expectedDurationMinutes: 45,
+    equipment: ['12-Lead ECG Unit', 'Echocardiogram Pro', 'Defibrillator Ready'],
+  },
+  {
+    id: 'r-6',
+    roomNumber: 'OBGYN Suite 2C',
+    wing: 'Cardiology & Specialty',
+    status: 'IN_USE',
+    roomType: 'Consultation Room',
+    floor: 'Floor 2 - Specialty Pavilion',
+    bedCount: 1,
+    bedType: 'Ultrasound Exam Bed',
+    assignedDoctor: 'Dr. Sarah Chen, MD',
+    assignedPatient: 'Zara Al-Mansoor',
+    patientId: 'p-5',
+    mrn: 'MRN-83920',
+    reason: 'Week 28 Prenatal Ultrasound Check',
+    elapsedMinutes: 20,
+    expectedDurationMinutes: 30,
+    equipment: ['GE Voluson Ultrasound', 'Fetal Doppler Monitor'],
+  },
+  {
+    id: 'r-7',
+    roomNumber: 'Minor Procedure 1',
+    wing: 'Cardiology & Specialty',
+    status: 'AVAILABLE',
+    roomType: 'Procedure Suite',
+    floor: 'Floor 2 - Specialty Pavilion',
+    bedCount: 1,
+    bedType: 'Surgical Articulating Bed',
+    equipment: ['Surgical Lighting', 'Cautery Unit', 'Sterile Field Array'],
+  },
+  {
+    id: 'r-8',
+    roomNumber: 'STAT Biomarkers Bench',
+    wing: 'Diagnostic Laboratory',
+    status: 'STAT_EMERGENCY',
+    roomType: 'STAT Biomarkers Bench',
+    floor: 'Floor 1 - Diagnostic Laboratory Wing',
+    bedCount: 1,
+    bedType: 'Abbott Alinity ci Bench',
+    assignedDoctor: 'Elena Rostova, CLS',
+    assignedPatient: 'Marcus Aurelius Jenkins',
+    patientId: 'p-2',
+    mrn: 'MRN-88401',
+    reason: 'Emergency Cardiac Troponin hs-cTnI (54.8 ng/L)',
+    elapsedMinutes: 12,
+    expectedDurationMinutes: 15,
+    equipment: ['Alinity ci-series', 'Centrifuge STAT Unit', 'LIS Auto-Verifier'],
+  },
+  {
+    id: 'r-9',
+    roomNumber: 'Chemistry Analyzer Bench',
+    wing: 'Diagnostic Laboratory',
+    status: 'IN_USE',
+    roomType: 'STAT Biomarkers Bench',
+    floor: 'Floor 1 - Diagnostic Laboratory Wing',
+    bedCount: 1,
+    bedType: 'Roche cobas 8000 Bench',
+    assignedDoctor: 'Elena Rostova, CLS',
+    assignedPatient: 'Eleanor Vance',
+    patientId: 'p-1',
+    mrn: 'MRN-90214',
+    reason: 'Comprehensive Metabolic Panel (CMP-14)',
+    elapsedMinutes: 22,
+    expectedDurationMinutes: 45,
+    equipment: ['Roche cobas 8000', 'Automated Pipetting Robot'],
+  },
+  {
+    id: 'r-10',
+    roomNumber: 'Phlebotomy Bay 1',
+    wing: 'Diagnostic Laboratory',
+    status: 'AVAILABLE',
+    roomType: 'Triage Bay',
+    floor: 'Floor 1 - Diagnostic Laboratory Wing',
+    bedCount: 1,
+    bedType: 'Phlebotomy Recliner',
+    equipment: ['Barcoded Vacutainer Dispenser', 'Vein Viewer Pro'],
+  },
+  {
+    id: 'r-11',
+    roomNumber: 'Hematology Analyzer 2',
+    wing: 'Diagnostic Laboratory',
+    status: 'AVAILABLE',
+    roomType: 'STAT Biomarkers Bench',
+    floor: 'Floor 1 - Diagnostic Laboratory Wing',
+    bedCount: 1,
+    bedType: 'Sysmex XN-1000 Bench',
+    equipment: ['Sysmex Automated Hematology', 'Slide Stainer Unit'],
+  },
+];
+
+export function getStoredHospitalRooms(): HospitalRoom[] {
+  if (typeof window === 'undefined') return [...DEFAULT_HOSPITAL_ROOMS];
+  try {
+    const saved = localStorage.getItem(ROOMS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return [...DEFAULT_HOSPITAL_ROOMS];
+}
+
+export function saveStoredHospitalRooms(rooms: HospitalRoom[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(ROOMS_STORAGE_KEY, JSON.stringify(rooms));
+  } catch {
+    // ignore
+  }
+}
+
+export async function fetchHospitalRooms(): Promise<HospitalRoom[]> {
+  return getStoredHospitalRooms();
+}
+
+export async function createHospitalRoom(
+  input: CreateRoomInput,
+): Promise<{ success: boolean; data?: HospitalRoom; error?: string }> {
+  if (!input.roomNumber?.trim()) {
+    return { success: false, error: 'Room number / identifier is required.' };
+  }
+
+  const existing = getStoredHospitalRooms();
+  if (existing.some((r) => r.roomNumber.toLowerCase() === input.roomNumber.trim().toLowerCase())) {
+    return { success: false, error: `A room named "${input.roomNumber}" already exists in the facility directory.` };
+  }
+
+  const newRoom: HospitalRoom = {
+    id: `r-${Date.now()}`,
+    roomNumber: input.roomNumber.trim(),
+    wing: input.wing,
+    roomType: input.roomType,
+    floor: input.floor || 'Floor 1 - General Wing',
+    bedCount: input.bedCount || 1,
+    bedType: input.bedType || 'Standard Examination Table',
+    status: input.status || 'AVAILABLE',
+    equipment: input.equipment || ['Vital Signs Monitor'],
+    notes: input.notes,
+    updatedAt: new Date().toISOString(),
+  };
+
+  const updated = [newRoom, ...existing];
+  saveStoredHospitalRooms(updated);
+
+  recordAuditLogEntry({
+    action: 'FACILITY_ROOM_CREATED',
+    resource: 'facility_rooms',
+    resourceId: newRoom.id,
+    userId: 'u-5',
+    userEmail: 'admin@caresync.org',
+    userRole: 'ADMINISTRATOR',
+    ipAddress: '192.168.1.10',
+    metadata: {
+      roomNumber: newRoom.roomNumber,
+      wing: newRoom.wing,
+      roomType: newRoom.roomType,
+      bedCount: newRoom.bedCount,
+    },
+  });
+
+  return { success: true, data: newRoom };
+}
+
+export async function updateHospitalRoom(
+  input: UpdateRoomInput,
+): Promise<{ success: boolean; data?: HospitalRoom; error?: string }> {
+  const existing = getStoredHospitalRooms();
+  const idx = existing.findIndex((r) => r.id === input.id);
+  if (idx === -1) {
+    return { success: false, error: 'Room record not found.' };
+  }
+
+  const updatedRoom: HospitalRoom = {
+    ...existing[idx],
+    ...input,
+    updatedAt: new Date().toISOString(),
+  };
+
+  existing[idx] = updatedRoom;
+  saveStoredHospitalRooms(existing);
+
+  recordAuditLogEntry({
+    action: 'FACILITY_ROOM_UPDATED',
+    resource: 'facility_rooms',
+    resourceId: updatedRoom.id,
+    userId: 'u-5',
+    userEmail: 'admin@caresync.org',
+    userRole: 'ADMINISTRATOR',
+    ipAddress: '192.168.1.10',
+    metadata: {
+      roomNumber: updatedRoom.roomNumber,
+      wing: updatedRoom.wing,
+      status: updatedRoom.status,
+    },
+  });
+
+  return { success: true, data: updatedRoom };
+}
+
+export async function deleteHospitalRoom(
+  roomId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const existing = getStoredHospitalRooms();
+  const target = existing.find((r) => r.id === roomId);
+  if (!target) {
+    return { success: false, error: 'Room record not found.' };
+  }
+
+  if (target.status === 'IN_USE' || target.status === 'STAT_EMERGENCY') {
+    return { success: false, error: 'Cannot decommission a room that is currently occupied with active clinical patients.' };
+  }
+
+  const updated = existing.filter((r) => r.id !== roomId);
+  saveStoredHospitalRooms(updated);
+
+  recordAuditLogEntry({
+    action: 'FACILITY_ROOM_DECOMMISSIONED',
+    resource: 'facility_rooms',
+    resourceId: roomId,
+    userId: 'u-5',
+    userEmail: 'admin@caresync.org',
+    userRole: 'ADMINISTRATOR',
+    ipAddress: '192.168.1.10',
+    metadata: {
+      roomNumber: target.roomNumber,
+      wing: target.wing,
+    },
+  });
+
+  return { success: true };
+}
+
+
 

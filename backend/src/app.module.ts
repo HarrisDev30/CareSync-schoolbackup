@@ -23,6 +23,7 @@ import { AppointmentsModule } from './modules/appointments/appointments.module';
 import { ConsultationsModule } from './modules/consultations/consultations.module';
 import { DiagnosticsModule } from './modules/diagnostics/diagnostics.module';
 import { AuditLogModule } from './modules/audit-log/audit-log.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 
 // Common Providers
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
@@ -92,6 +93,7 @@ import { RedisService } from './common/services/redis.service';
     ConsultationsModule,
     DiagnosticsModule,
     AuditLogModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Calendar,
   UserPlus,
@@ -17,6 +18,7 @@ import {
   createPatient,
   updateAppointmentStatus,
   PHYSICIAN_PRESETS,
+  STAFF_PRESETS,
   getActiveStaffUser,
 } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -29,7 +31,8 @@ import { AdmissionsWorklistCard } from './_components/admissions-worklist-card';
 import { PhysicianSuitesDialog } from './_components/physician-suites-dialog';
 
 export default function ReceptionistOverviewPage() {
-  const [currentStaff, setCurrentStaff] = useState<StaffUser>(getActiveStaffUser());
+  const router = useRouter();
+  const [currentStaff, setCurrentStaff] = useState<StaffUser>(STAFF_PRESETS[0]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [labOrders, setLabOrders] = useState<LabOrder[]>([]);
@@ -45,15 +48,36 @@ export default function ReceptionistOverviewPage() {
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    setCurrentStaff(getActiveStaffUser());
+    const active = getActiveStaffUser();
+    setCurrentStaff(active);
+    if (active.role === 'ADMINISTRATOR') {
+      router.replace('/analytics');
+      return;
+    }
+    if (active.role === 'LABORATORY_USER') {
+      router.replace('/labs');
+      return;
+    }
+    if (active.role === 'PATIENT') {
+      router.replace('/patient-portal');
+      return;
+    }
+
     const interval = setInterval(() => {
-      const active = getActiveStaffUser();
-      if (active.email !== currentStaff.email) {
-        setCurrentStaff(active);
+      const live = getActiveStaffUser();
+      if (live.email !== currentStaff.email) {
+        setCurrentStaff(live);
+        if (live.role === 'ADMINISTRATOR') {
+          router.replace('/analytics');
+        } else if (live.role === 'LABORATORY_USER') {
+          router.replace('/labs');
+        } else if (live.role === 'PATIENT') {
+          router.replace('/patient-portal');
+        }
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [currentStaff.email]);
+  }, [currentStaff.email, router]);
 
   const loadData = async () => {
     setLoading(true);

@@ -65,6 +65,7 @@ import {
   dischargePatient,
   getStoredDischargeSummary,
 } from '@/lib/api';
+import { evaluatePrescriptionSafety, CdsEvaluationResult } from '@/lib/cds-engine';
 import { MedicalRecordExportModal } from '@/components/medical-record-export-modal';
 
 interface PatientChartModalProps {
@@ -89,7 +90,10 @@ const RX_PRESETS = [
   { name: 'Lisinopril', dosage: '10 mg', freq: 'Once daily in morning', sig: 'Take 1 tablet by mouth daily in the morning with water.' },
   { name: 'Atorvastatin', dosage: '20 mg', freq: 'Once daily at bedtime', sig: 'Take 1 tablet orally once per day at bedtime.' },
   { name: 'Metformin', dosage: '500 mg', freq: 'Twice daily with meals', sig: 'Take 1 tablet by mouth twice daily with morning and evening meals.' },
-  { name: 'Amoxicillin', dosage: '500 mg', freq: 'Every 8 hours for 10 days', sig: 'Take 1 capsule by mouth every 8 hours until full course completed.' },
+  { name: 'Amoxicillin (Beta-Lactam)', dosage: '500 mg', freq: 'Every 8 hours for 10 days', sig: 'Take 1 capsule by mouth every 8 hours until full course completed.' },
+  { name: 'Azithromycin (Zithromax)', dosage: '500 mg Day 1, then 250 mg', freq: 'Once daily for 5 days', sig: 'Take once daily on empty stomach 1 hour before or 2 hours after meals.' },
+  { name: 'Bactrim DS (Sulfa)', dosage: '800/160 mg', freq: 'Twice daily for 7 days', sig: 'Take 1 tablet twice daily with a full glass of water.' },
+  { name: 'Ibuprofen (NSAID)', dosage: '600 mg', freq: 'Every 8 hours with food', sig: 'Take with food to minimize GI discomfort. Max 2400 mg/day.' },
   { name: 'Albuterol Inhaler', dosage: '90 mcg/actuation', freq: 'As needed (PRN)', sig: 'Inhale 2 puffs every 4-6 hours as needed for bronchospasm/wheezing.' },
   { name: 'Omeprazole', dosage: '20 mg', freq: 'Once daily before breakfast', sig: 'Take 1 capsule orally once daily 30 minutes before morning meal.' },
 ];
@@ -203,6 +207,8 @@ export function PatientChartModal({
   const [rxDuration, setRxDuration] = useState('30 days');
   const [rxRefills, setRxRefills] = useState('1');
   const [isIssuingRx, setIsIssuingRx] = useState(false);
+  const [isCdsOverridden, setIsCdsOverridden] = useState(false);
+  const [cdsOverrideReason, setCdsOverrideReason] = useState('');
 
   // Discharge Form State
   const [dischargeDisposition, setDischargeDisposition] = useState<DischargeSummary['disposition']>('Home / Self-Care');
@@ -286,6 +292,11 @@ export function PatientChartModal({
   const spo2Eval = evaluateSpO2(currentVitalSigns.oxygenSaturation);
   const tempEval = evaluateTemperature(currentVitalSigns.temperatureCelsius);
 
+  const cdsEvaluation: CdsEvaluationResult = evaluatePrescriptionSafety(
+    patient?.allergies || [],
+    rxName,
+  );
+
   // Issue E-Prescription Handler
   const handleIssuePrescription = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -293,15 +304,28 @@ export function PatientChartModal({
       showNotice('error', 'Please specify medication name and dosage.');
       return;
     }
+
+    if (cdsEvaluation.hasContraindication && !isCdsOverridden) {
+      showNotice(
+        'error',
+        `⚠️ ALLERGY SAFETY BLOCK: ${rxName} is contraindicated due to documented ${cdsEvaluation.matchedAllergy} allergy. Switch to a recommended safe alternative or document clinical override rationale below.`,
+      );
+      return;
+    }
+
     setIsIssuingRx(true);
     try {
+      const finalInstructions = isCdsOverridden
+        ? `${rxInstructions || `Take ${rxDosage} ${rxFrequency.toLowerCase()} as prescribed.`} [CDS OVERRIDE: ${cdsOverrideReason.trim() || 'Physician clinical judgment / verified desensitization'}]`
+        : rxInstructions || `Take ${rxDosage} ${rxFrequency.toLowerCase()} as prescribed.`;
+
       const res = await createPrescription({
         patientId: patient.id,
         name: rxName,
         dosage: rxDosage,
         frequency: rxFrequency,
         prescribedBy: attendingPhysician || patient.primaryPhysician || 'Dr. Sarah Chen, MD',
-        instructions: rxInstructions || `Take ${rxDosage} ${rxFrequency.toLowerCase()} as prescribed.`,
+        instructions: finalInstructions,
         duration: rxDuration,
         refills: parseInt(rxRefills, 10) || 0,
       });
@@ -310,6 +334,8 @@ export function PatientChartModal({
         setRxName('');
         setRxDosage('');
         setRxInstructions('');
+        setIsCdsOverridden(false);
+        setCdsOverrideReason('');
         showNotice('success', `E-Prescription issued for ${res.data.name} (${res.data.dosage}). Logged to HIPAA audit stream.`);
       } else {
         showNotice('error', res.error || 'Failed to issue prescription.');
@@ -326,6 +352,18 @@ export function PatientChartModal({
     setRxDosage(preset.dosage);
     setRxFrequency(preset.freq);
     setRxInstructions(preset.sig);
+    setIsCdsOverridden(false);
+    setCdsOverrideReason('');
+  };
+
+  const handleApplyCdsAlternative = (alt: { drugName: string; dosage: string; frequency: string; reason: string }) => {
+    setRxName(alt.drugName);
+    setRxDosage(alt.dosage);
+    setRxFrequency(alt.frequency);
+    setRxInstructions(`Take ${alt.dosage} ${alt.frequency.toLowerCase()}. Prescribed as safe non-cross-reactive alternative.`);
+    setIsCdsOverridden(false);
+    setCdsOverrideReason('');
+    showNotice('success', `Switched to safe alternative: ${alt.drugName}`);
   };
 
   // Patient Discharge Handler
@@ -1433,6 +1471,82 @@ export function PatientChartModal({
                     ))}
                   </div>
                 </div>
+
+                {/* CDS Real-Time Clinical Decision Allergy Alert Card */}
+                {cdsEvaluation.hasContraindication && (
+                  <div
+                    className={`p-3.5 rounded-lg border text-xs space-y-2.5 transition-all ${
+                      cdsEvaluation.severity === 'CRITICAL'
+                        ? 'bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-200'
+                        : 'bg-amber-500/10 border-amber-500/30 text-amber-800 dark:text-amber-200'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="size-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                        <div className="space-y-0.5">
+                          <span className="font-bold text-xs uppercase tracking-wider">
+                            Clinical Decision Alert: Documented Allergy Conflict ({cdsEvaluation.matchedAllergy})
+                          </span>
+                          <p className="text-[11px] leading-relaxed opacity-90">
+                            {cdsEvaluation.clinicalRationale}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge
+                        variant="destructive"
+                        className="font-mono text-[9px] uppercase px-1.5 py-0 h-4 shrink-0 font-bold bg-rose-600 text-white"
+                      >
+                        {cdsEvaluation.severity} RISK
+                      </Badge>
+                    </div>
+
+                    {/* Recommended Safe Alternatives */}
+                    {cdsEvaluation.suggestedAlternatives.length > 0 && (
+                      <div className="pt-2 border-t border-rose-500/20 space-y-1.5">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground block">
+                          Pharmacist-Curated Safe Non-Cross-Reactive Alternatives:
+                        </span>
+                        <div className="flex flex-wrap gap-2">
+                          {cdsEvaluation.suggestedAlternatives.map((alt) => (
+                            <Button
+                              key={alt.drugName}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleApplyCdsAlternative(alt)}
+                              className="h-7 text-xs gap-1.5 bg-background hover:bg-muted border-rose-500/30 text-foreground cursor-pointer"
+                              title={alt.reason}
+                            >
+                              <span>🔄 Switch to {alt.drugName}</span>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Clinical Override Option */}
+                    <div className="pt-2 border-t border-rose-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <label className="inline-flex items-center gap-2 cursor-pointer text-[11px]">
+                        <input
+                          type="checkbox"
+                          checked={isCdsOverridden}
+                          onChange={(e) => setIsCdsOverridden(e.target.checked)}
+                          className="rounded border-border size-3.5 text-primary focus:ring-1 cursor-pointer"
+                        />
+                        <span className="font-medium">Override warning with physician clinical justification</span>
+                      </label>
+                      {isCdsOverridden && (
+                        <Input
+                          value={cdsOverrideReason}
+                          onChange={(e) => setCdsOverrideReason(e.target.value)}
+                          placeholder="Document rationale (e.g. Desensitized / Critical indication)..."
+                          className="h-7 text-xs bg-background border-rose-500/40 max-w-xs"
+                        />
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <form onSubmit={handleIssuePrescription} className="space-y-3 pt-1">
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">

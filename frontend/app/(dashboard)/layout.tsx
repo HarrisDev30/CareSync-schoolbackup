@@ -87,11 +87,43 @@ export default function DashboardLayout({
     setCurrentStaff(staff);
     await setActiveStaffUser(staff);
     triggerToast(`Switched active terminal to ${staff.fullName} (${staff.role})`);
-    if (staff.role === 'PATIENT') {
+    
+    // Auto-navigate to primary operational landing page for each role
+    if (staff.role === 'ADMINISTRATOR') {
+      if (pathname !== '/analytics' && pathname !== '/audit-logs' && pathname !== '/rooms') {
+        router.push('/analytics');
+      }
+    } else if (staff.role === 'PHYSICIAN') {
+      if (pathname === '/' || pathname === '/analytics' || pathname === '/audit-logs' || pathname === '/patient-portal') {
+        router.push('/patients');
+      }
+    } else if (staff.role === 'LABORATORY_USER') {
+      if (pathname === '/' || pathname === '/analytics' || pathname === '/audit-logs' || pathname === '/appointments' || pathname === '/patient-portal') {
+        router.push('/labs');
+      }
+    } else if (staff.role === 'RECEPTIONIST') {
+      if (pathname === '/analytics' || pathname === '/audit-logs' || pathname === '/patient-portal') {
+        router.push('/');
+      }
+    } else if (staff.role === 'PATIENT') {
       router.push('/patient-portal');
-    } else if (pathname === '/patient-portal') {
-      router.push('/');
     }
+  };
+
+  const getRoleHeaderInfo = () => {
+    if (currentStaff.role === 'ADMINISTRATOR') {
+      return { title: 'CareSync Executive', href: '/analytics' };
+    }
+    if (currentStaff.role === 'PHYSICIAN') {
+      return { title: 'CareSync Clinical', href: '/patients' };
+    }
+    if (currentStaff.role === 'LABORATORY_USER') {
+      return { title: 'CareSync Laboratory', href: '/labs' };
+    }
+    if (currentStaff.role === 'PATIENT') {
+      return { title: 'CareSync Portal', href: '/patient-portal' };
+    }
+    return { title: 'CareSync Admissions', href: '/' };
   };
 
   const getPageTitle = () => {
@@ -100,9 +132,14 @@ export default function DashboardLayout({
     if (pathname.startsWith('/patients')) return 'Patient Admissions & Registry';
     if (pathname.startsWith('/appointments')) return 'Consultation Scheduling & Triage';
     if (pathname.startsWith('/labs')) return 'Diagnostic Services & Lab Orders';
+    if (pathname.startsWith('/analytics')) return 'Executive Analytics';
+    if (pathname.startsWith('/rooms')) return 'Rooms';
     if (pathname.startsWith('/audit-logs')) return 'Compliance Audit Logs';
-    return pathname.replace('/', '').replace('-', ' ');
+    const cleaned = pathname.replace(/^\//, '').replace(/-/g, ' ');
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   };
+
+  const roleHeader = getRoleHeaderInfo();
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -183,8 +220,8 @@ export default function DashboardLayout({
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/" className="text-sm text-muted-foreground hover:text-foreground">
-                    CareSync Admissions
+                  <BreadcrumbLink href={roleHeader.href} className="text-sm text-muted-foreground hover:text-foreground">
+                    {roleHeader.title}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />

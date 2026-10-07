@@ -40,17 +40,19 @@ export function NavMain({
     <SidebarGroup>
       <SidebarGroupLabel>{label}</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => (
-          <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip={item.title}>
-                <Link href={item.url}>
-                  <item.icon />
-                  <span>{item.title}</span>
-                </Link>
-              </SidebarMenuButton>
-              {item.items?.length ? (
-                <>
+        {items.map((item) => {
+          const hasMultipleSubItems = Boolean(item.items && item.items.length > 1);
+
+          if (hasMultipleSubItems) {
+            return (
+              <Collapsible key={item.title} asChild defaultOpen={item.isActive}>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip={item.title}>
+                    <Link href={item.url}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuAction className="data-[state=open]:rotate-90">
                       <ChevronRight />
@@ -70,11 +72,23 @@ export function NavMain({
                       ))}
                     </SidebarMenuSub>
                   </CollapsibleContent>
-                </>
-              ) : null}
+                </SidebarMenuItem>
+              </Collapsible>
+            );
+          }
+
+          // Single feature item: clean direct button with NO chevron
+          return (
+            <SidebarMenuItem key={item.title}>
+              <SidebarMenuButton asChild tooltip={item.title}>
+                <Link href={item.url}>
+                  <item.icon />
+                  <span>{item.title}</span>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
-          </Collapsible>
-        ))}
+          );
+        })}
       </SidebarMenu>
     </SidebarGroup>
   )

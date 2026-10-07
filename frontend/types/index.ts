@@ -238,3 +238,60 @@ export interface DischargeSummary {
   followUpInstructions: string;
   reconciliationCompleted: boolean;
 }
+
+export type RoomWing = 'Outpatient Clinic' | 'Cardiology & Specialty' | 'Diagnostic Laboratory';
+export type RoomStatus = 'AVAILABLE' | 'IN_USE' | 'SANITIZING' | 'MAINTENANCE' | 'STAT_EMERGENCY';
+export type RoomType = 'Examination Suite' | 'Consultation Room' | 'STAT Biomarkers Bench' | 'Procedure Suite' | 'Triage Bay';
+
+export interface HospitalRoom {
+  id: string;
+  roomNumber: string;
+  wing: RoomWing;
+  status: RoomStatus;
+  roomType: RoomType;
+  floor: string;
+  bedCount: number;
+  bedType?: string;
+  assignedDoctor?: string;
+  assignedPatient?: string;
+  patientId?: string;
+  mrn?: string;
+  reason?: string;
+  elapsedMinutes?: number;
+  expectedDurationMinutes?: number;
+  equipment?: string[];
+  notes?: string;
+  updatedAt?: string;
+}
+
+export interface CreateRoomInput {
+  roomNumber: string;
+  wing: RoomWing;
+  roomType: RoomType;
+  floor?: string;
+  bedCount?: number;
+  bedType?: string;
+  equipment?: string[];
+  status?: RoomStatus;
+  notes?: string;
+}
+
+export interface UpdateRoomInput {
+  id: string;
+  roomNumber?: string;
+  wing?: RoomWing;
+  status?: RoomStatus;
+  roomType?: RoomType;
+  floor?: string;
+  bedCount?: number;
+  bedType?: string;
+  equipment?: string[];
+  assignedDoctor?: string;
+  assignedPatient?: string;
+  patientId?: string;
+  mrn?: string;
+  reason?: string;
+  elapsedMinutes?: number;
+  expectedDurationMinutes?: number;
+  notes?: string;
+}

@@ -11,6 +11,8 @@ import {
   Stethoscope,
   Lock,
   FileSpreadsheet,
+  Building2,
+  TrendingUp,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -44,48 +46,159 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const isPatient = currentStaff.role === 'PATIENT';
   const isAdmin = currentStaff.role === 'ADMINISTRATOR';
+  const isPhysician = currentStaff.role === 'PHYSICIAN';
+  const isLabUser = currentStaff.role === 'LABORATORY_USER';
 
-  const staffNav = [
-    {
-      title: "Patient Admissions",
-      url: "/",
-      icon: Users,
-      isActive: true,
-      items: [
+  // Role-Segmented Navigation Items
+  const staffNav = React.useMemo(() => {
+    // 1. ADMINISTRATOR NAVIGATION (Executive Governance & Facility Suite)
+    if (isAdmin) {
+      return [
         {
-          title: "Front Desk Overview",
-          url: "/",
+          title: "Hospital Analytics",
+          url: "/analytics",
+          icon: TrendingUp,
         },
         {
-          title: "Admissions & Registry",
+          title: "Facility & Rooms",
+          url: "/rooms",
+          icon: Building2,
+        },
+        {
+          title: "Audit Logs",
+          url: "/audit-logs",
+          icon: ShieldCheck,
+        },
+      ];
+    }
+
+    // 2. PHYSICIAN / DOCTOR NAVIGATION
+    if (isPhysician) {
+      return [
+        {
+          title: "Clinical Workstation",
           url: "/patients",
+          icon: Users,
+          isActive: true,
+          items: [
+            {
+              title: "Doctor Patient Chart & EMR",
+              url: "/patients",
+            },
+            {
+              title: "Daily Outpatient Queue",
+              url: "/appointments",
+            },
+          ],
         },
-      ],
-    },
-    {
-      title: "Consultation Scheduling",
-      url: "/appointments",
-      icon: Calendar,
-      isActive: true,
-      items: [
         {
-          title: "Daily Outpatient Queue",
-          url: "/appointments",
-        },
-      ],
-    },
-    {
-      title: "Diagnostic Services",
-      url: "/labs",
-      icon: Beaker,
-      items: [
-        {
-          title: "Lab Requisitions & Worklist",
+          title: "Diagnostic Services",
           url: "/labs",
+          icon: Beaker,
+          items: [
+            {
+              title: "Lab Requisitions & Review",
+              url: "/labs",
+            },
+          ],
         },
-      ],
-    },
-  ];
+        {
+          title: "Room Availability",
+          url: "/rooms",
+          icon: Building2,
+          items: [
+            {
+              title: "Hospital Rooms & Wings",
+              url: "/rooms",
+            },
+          ],
+        },
+      ];
+    }
+
+    // 3. LABORATORY TECHNICIAN NAVIGATION
+    if (isLabUser) {
+      return [
+        {
+          title: "Diagnostic Laboratory",
+          url: "/labs",
+          icon: Beaker,
+          isActive: true,
+          items: [
+            {
+              title: "Lab Requisitions & Worklist",
+              url: "/labs",
+            },
+          ],
+        },
+        {
+          title: "Patient Directory",
+          url: "/patients",
+          icon: Users,
+          items: [
+            {
+              title: "Patient Directory (Read-Only)",
+              url: "/patients",
+            },
+          ],
+        },
+        {
+          title: "Hospital Capacity",
+          url: "/rooms",
+          icon: Building2,
+          items: [
+            {
+              title: "Room Availability",
+              url: "/rooms",
+            },
+          ],
+        },
+      ];
+    }
+
+    // 4. RECEPTIONIST NAVIGATION (DEFAULT FRONT DESK)
+    return [
+      {
+        title: "Front Desk & Admissions",
+        url: "/",
+        icon: Users,
+        isActive: true,
+        items: [
+          {
+            title: "Front Desk Overview",
+            url: "/",
+          },
+          {
+            title: "Admissions & Registry",
+            url: "/patients",
+          },
+        ],
+      },
+      {
+        title: "Consultation Scheduling",
+        url: "/appointments",
+        icon: Calendar,
+        isActive: true,
+        items: [
+          {
+            title: "Daily Outpatient Queue",
+            url: "/appointments",
+          },
+        ],
+      },
+      {
+        title: "Room Management",
+        url: "/rooms",
+        icon: Building2,
+        items: [
+          {
+            title: "Hospital Rooms & Capacity",
+            url: "/rooms",
+          },
+        ],
+      },
+    ];
+  }, [isAdmin, isPhysician, isLabUser]);
 
   const patientNav = [
     {
@@ -152,15 +265,6 @@ export function AppSidebar({
   ];
 
   const navSecondary = [
-    ...(isAdmin
-      ? [
-          {
-            title: "Compliance Audit Logs",
-            url: "/audit-logs",
-            icon: ShieldCheck,
-          },
-        ]
-      : []),
     {
       title: "Lock Workstation",
       url: "#",
@@ -169,13 +273,60 @@ export function AppSidebar({
     },
   ];
 
+  // Dynamic branding based on active role
+  const getBrandInfo = () => {
+    if (isPatient) {
+      return {
+        href: "/patient-portal",
+        badge: "PATIENT",
+        subtitle: "Patient Health Portal",
+      };
+    }
+    if (isAdmin) {
+      return {
+        href: "/analytics",
+        badge: "ADMIN",
+        subtitle: "Executive Governance & Analytics",
+      };
+    }
+    if (isPhysician) {
+      return {
+        href: "/patients",
+        badge: "CLINICAL",
+        subtitle: "Doctor Clinical Workstation",
+      };
+    }
+    if (isLabUser) {
+      return {
+        href: "/labs",
+        badge: "LAB",
+        subtitle: "Diagnostic Pathology & Testing",
+      };
+    }
+    return {
+      href: "/",
+      badge: "ADMISSIONS",
+      subtitle: "Front Desk & Admissions OS",
+    };
+  };
+
+  const brand = getBrandInfo();
+
+  const getNavLabel = () => {
+    if (isPatient) return "Patient Health Portal";
+    if (isAdmin) return "Hospital Administration";
+    if (isPhysician) return "Physician Clinical Care";
+    if (isLabUser) return "Diagnostic Laboratory Services";
+    return "Admissions & Front Desk";
+  };
+
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href={isPatient ? "/patient-portal" : "/"}>
+              <Link href={brand.href}>
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold shadow-xs">
                   <Activity className="size-4" />
                 </div>
@@ -186,11 +337,11 @@ export function AppSidebar({
                       variant="outline"
                       className="text-[9px] py-0 px-1 font-mono text-muted-foreground border-border"
                     >
-                      {isPatient ? "PATIENT" : "INTAKE"}
+                      {brand.badge}
                     </Badge>
                   </div>
                   <span className="truncate text-xs text-muted-foreground">
-                    {isPatient ? "Patient Health Portal" : "Admissions & Clinic OS"}
+                    {brand.subtitle}
                   </span>
                 </div>
               </Link>
@@ -202,7 +353,7 @@ export function AppSidebar({
       <SidebarContent>
         <NavMain
           items={isPatient ? patientNav : staffNav}
-          label={isPatient ? "Patient Health Portal" : "Admissions & Clinical Care"}
+          label={getNavLabel()}
         />
         {isPatient && (
           <NavProjects

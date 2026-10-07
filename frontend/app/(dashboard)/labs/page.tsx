@@ -236,7 +236,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-[11px] py-0.5 px-2 gap-1.5"
+            className="border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-xs py-1 px-2.5 gap-1.5"
           >
             <span className="size-1.5 rounded-full bg-red-500 animate-ping shrink-0" />
             <span>STAT</span>
@@ -246,7 +246,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold text-[11px] py-0.5 px-2 gap-1"
+            className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold text-xs py-1 px-2.5 gap-1.5"
           >
             <Clock className="size-3 text-amber-600 dark:text-amber-400" />
             <span>Urgent</span>
@@ -256,7 +256,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-border bg-muted/40 text-muted-foreground font-medium text-[11px] py-0.5 px-2"
+            className="border-border bg-muted/40 text-muted-foreground font-medium text-xs py-1 px-2.5"
           >
             Routine
           </Badge>
@@ -273,7 +273,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] py-0.5 px-2 gap-1"
+            className="border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold text-xs py-1 px-2.5 gap-1.5"
           >
             <Check className="size-3" />
             <span>Reviewed</span>
@@ -283,7 +283,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium text-[11px] py-0.5 px-2 gap-1"
+            className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium text-xs py-1 px-2.5 gap-1.5"
           >
             <CheckCircle2 className="size-3" />
             <span>Verified</span>
@@ -293,7 +293,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium text-[11px] py-0.5 px-2"
+            className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium text-xs py-1 px-2.5"
           >
             Resulted
           </Badge>
@@ -303,7 +303,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 font-medium text-[11px] py-0.5 px-2 gap-1"
+            className="border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 font-medium text-xs py-1 px-2.5 gap-1.5"
           >
             <Activity className="size-3 animate-spin text-sky-600 dark:text-sky-400" />
             <span>In Lab Run</span>
@@ -313,7 +313,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium text-[11px] py-0.5 px-2"
+            className="border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium text-xs py-1 px-2.5"
           >
             Specimen In Lab
           </Badge>
@@ -365,31 +365,26 @@ export default function LabsPage() {
 
       {/* 1. COMMAND HEADER (Exact match to all dashboard pages) */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-1">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="size-7 rounded-md bg-primary/10 text-primary flex items-center justify-center border border-primary/20 shrink-0">
-              <Beaker className="size-4 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Diagnostic Services & Lab Orders
-            </h1>
-          </div>
-          <p className="text-xs text-muted-foreground">
+        <div className="space-y-1.5">
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Diagnostic Services & Lab Orders
+          </h1>
+          <p className="text-sm text-muted-foreground">
             Clinical worklist, specimen tracking, priority triage, and verified laboratory findings.
           </p>
         </div>
 
         {/* Global Action Group */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2.5 flex-wrap">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsCommandOpen(true)}
-            className="gap-2 text-xs text-muted-foreground hover:text-foreground h-9 px-3 border-border shadow-xs cursor-pointer"
+            className="gap-2 text-sm text-muted-foreground hover:text-foreground h-10 px-3.5 border-border shadow-none cursor-pointer"
           >
-            <Search className="size-3.5 text-muted-foreground" />
+            <Search className="w-4 h-4 text-muted-foreground" />
             <span className="hidden sm:inline">Search records</span>
-            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted/50 px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+            <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground">
               ⌘K
             </kbd>
           </Button>
@@ -398,10 +393,10 @@ export default function LabsPage() {
             variant="outline"
             size="sm"
             asChild
-            className="h-9 text-xs gap-1.5 border-border shadow-xs cursor-pointer"
+            className="h-10 text-sm gap-2 px-3.5 border-border shadow-none text-muted-foreground hover:text-foreground"
           >
             <Link href="/patients">
-              <Users className="size-3.5 text-muted-foreground" />
+              <Users className="w-4 h-4 text-muted-foreground" />
               <span>Patients</span>
             </Link>
           </Button>
@@ -409,9 +404,9 @@ export default function LabsPage() {
           <Button
             onClick={() => setIsRequisitionOpen(true)}
             size="sm"
-            className="gap-1.5 shadow-xs bg-primary text-primary-foreground hover:bg-primary/90 h-9 cursor-pointer active:scale-[0.98] transition-transform font-medium"
+            className="gap-2 h-10 px-4 cursor-pointer active:scale-[0.98] transition-transform bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
           >
-            <Plus className="size-4" />
+            <Plus className="w-4 h-4" />
             <span>New Requisition</span>
           </Button>
         </div>
@@ -427,50 +422,25 @@ export default function LabsPage() {
 
       {/* 3. DIAGNOSTIC ORDERS WORKLIST CARD */}
       <Card className="shadow-xs border-border bg-card">
-        <CardHeader className="pb-3 pt-4 px-5">
+        <CardHeader className="py-5 px-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+              <CardTitle className="text-lg font-semibold tracking-tight text-foreground flex items-center gap-2.5">
                 <span>Diagnostic Worklist</span>
-                <Badge variant="secondary" className="font-mono text-xs">
-                  {filteredOrders.length}
+                <Badge variant="outline" className="font-mono text-xs font-medium text-muted-foreground px-2 py-0.5">
+                  {filteredOrders.length} orders
                 </Badge>
               </CardTitle>
-              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+              <CardDescription className="text-sm text-muted-foreground mt-1">
                 Laboratory orders, priority specimen tracking, and critical flags.
               </CardDescription>
             </div>
-
-            {/* Segmented Priority Tabs */}
-            <Tabs
-              value={priorityFilter}
-              onValueChange={(val) => {
-                setPriorityFilter(val);
-                setCurrentPage(1);
-              }}
-              className="w-auto"
-            >
-              <TabsList className="h-8 bg-muted/60 p-0.5 border border-border">
-                <TabsTrigger value="ALL" className="text-xs px-2.5 py-1">
-                  All <span className="ml-1 text-[10px] font-mono text-muted-foreground">({orders.length})</span>
-                </TabsTrigger>
-                <TabsTrigger value="STAT" className="text-xs px-2.5 py-1">
-                  STAT <span className="ml-1 text-[10px] font-mono text-red-600 dark:text-red-400 font-semibold">({statCount})</span>
-                </TabsTrigger>
-                <TabsTrigger value="URGENT" className="text-xs px-2.5 py-1">
-                  Urgent <span className="ml-1 text-[10px] font-mono text-amber-600 dark:text-amber-400">({urgentCount})</span>
-                </TabsTrigger>
-                <TabsTrigger value="ROUTINE" className="text-xs px-2.5 py-1">
-                  Routine <span className="ml-1 text-[10px] font-mono text-muted-foreground">({routineCount})</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
           </div>
 
-          {/* Integrated Search & Filters */}
-          <div className="pt-2.5 flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          {/* Unified Command Toolbar: Search + Priority Tabs + Category & Status Selects */}
+          <div className="pt-3.5 flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
             <div className="relative flex-1">
-              <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="text"
                 value={searchQuery}
@@ -479,79 +449,106 @@ export default function LabsPage() {
                   setCurrentPage(1);
                 }}
                 placeholder="Filter orders by order #, patient, MRN, panel, or clinician..."
-                className="pl-9 pr-14 h-9 text-xs border-border focus-visible:ring-1 focus-visible:ring-ring bg-background text-foreground"
+                className="pl-10 pr-16 h-10 text-sm border-border bg-background shadow-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <button
                 type="button"
                 onClick={() => setIsCommandOpen(true)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border bg-muted/40 text-[10px] font-mono text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-2 py-1 rounded border border-border bg-muted text-xs font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 title="Open Command Palette (⌘K)"
               >
                 ⌘K
               </button>
             </div>
 
-            {/* Category Filter */}
-            <div className="w-full sm:w-52">
-              <Select
-                value={categoryFilter}
+            <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
+              {/* Segmented Priority Tabs (Exact match to Consultation and Patients pages) */}
+              <Tabs
+                value={priorityFilter}
                 onValueChange={(val) => {
-                  setCategoryFilter(val);
+                  setPriorityFilter(val);
                   setCurrentPage(1);
                 }}
+                className="w-auto shrink-0"
               >
-                <SelectTrigger className="h-9 text-xs border-border bg-background text-foreground">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover dark:bg-card border-border shadow-2xl z-50">
-                  <SelectGroup>
-                    <SelectItem value="ALL" className="text-xs">All Categories</SelectItem>
-                    <SelectItem value="General Chemistry" className="text-xs">General Chemistry</SelectItem>
-                    <SelectItem value="Hematology" className="text-xs">Hematology</SelectItem>
-                    <SelectItem value="Cardiovascular Chemistry" className="text-xs">Cardiovascular Chemistry</SelectItem>
-                    <SelectItem value="Cardiology Biomarkers" className="text-xs">Cardiology Biomarkers</SelectItem>
-                    <SelectItem value="Renal & Urology" className="text-xs">Renal & Urology</SelectItem>
-                    <SelectItem value="Radiology / Imaging" className="text-xs">Radiology / Imaging</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
+                <TabsList className="h-10 bg-muted p-1 border border-border">
+                  <TabsTrigger value="ALL" className="text-sm px-3.5 py-1.5 font-medium">
+                    All ({orders.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="STAT" className="text-sm px-3.5 py-1.5 font-medium">
+                    STAT ({statCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="URGENT" className="text-sm px-3.5 py-1.5 font-medium">
+                    Urgent ({urgentCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="ROUTINE" className="text-sm px-3.5 py-1.5 font-medium">
+                    Routine ({routineCount})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
 
-            {/* Status Filter */}
-            <div className="w-full sm:w-44">
-              <Select
-                value={statusFilter}
-                onValueChange={(val) => {
-                  setStatusFilter(val);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="h-9 text-xs border-border bg-background text-foreground">
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover dark:bg-card border-border shadow-2xl z-50">
-                  <SelectGroup>
-                    <SelectItem value="ALL" className="text-xs">All Statuses</SelectItem>
-                    <SelectItem value="PENDING" className="text-xs">Requisitioned</SelectItem>
-                    <SelectItem value="IN_LAB" className="text-xs">In Laboratory Run</SelectItem>
-                    <SelectItem value="RESULTED" className="text-xs">Resulted</SelectItem>
-                    <SelectItem value="VERIFIED" className="text-xs">Verified & Reviewed</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
+              {/* Category Filter */}
+              <div className="w-full sm:w-48 shrink-0">
+                <Select
+                  value={categoryFilter}
+                  onValueChange={(val) => {
+                    setCategoryFilter(val);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-10 text-sm border-border bg-background shadow-none">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover dark:bg-card border-border shadow-2xl z-50">
+                    <SelectGroup>
+                      <SelectItem value="ALL" className="text-sm">All Categories</SelectItem>
+                      <SelectItem value="General Chemistry" className="text-sm">General Chemistry</SelectItem>
+                      <SelectItem value="Hematology" className="text-sm">Hematology</SelectItem>
+                      <SelectItem value="Cardiovascular Chemistry" className="text-sm">Cardiovascular Chemistry</SelectItem>
+                      <SelectItem value="Cardiology Biomarkers" className="text-sm">Cardiology Biomarkers</SelectItem>
+                      <SelectItem value="Renal & Urology" className="text-sm">Renal & Urology</SelectItem>
+                      <SelectItem value="Radiology / Imaging" className="text-sm">Radiology / Imaging</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetFilters}
-                className="h-9 text-xs text-muted-foreground hover:text-foreground gap-1 px-2.5 cursor-pointer"
-              >
-                <RotateCcw className="size-3.5" />
-                <span>Reset</span>
-              </Button>
-            )}
+              {/* Status Filter */}
+              <div className="w-full sm:w-44 shrink-0">
+                <Select
+                  value={statusFilter}
+                  onValueChange={(val) => {
+                    setStatusFilter(val);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-10 text-sm border-border bg-background shadow-none">
+                    <SelectValue placeholder="All Statuses" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover dark:bg-card border-border shadow-2xl z-50">
+                    <SelectGroup>
+                      <SelectItem value="ALL" className="text-sm">All Statuses</SelectItem>
+                      <SelectItem value="PENDING" className="text-sm">Requisitioned</SelectItem>
+                      <SelectItem value="IN_LAB" className="text-sm">In Laboratory Run</SelectItem>
+                      <SelectItem value="RESULTED" className="text-sm">Resulted</SelectItem>
+                      <SelectItem value="VERIFIED" className="text-sm">Verified & Reviewed</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetFilters}
+                  className="h-10 text-sm text-muted-foreground hover:text-foreground gap-1.5 px-3 cursor-pointer shrink-0"
+                >
+                  <RotateCcw className="size-4" />
+                  <span>Reset</span>
+                </Button>
+              )}
+            </div>
           </div>
         </CardHeader>
 
@@ -560,26 +557,26 @@ export default function LabsPage() {
           <Table>
             <TableHeader>
               <TableRow className="border-b border-border bg-muted/30">
-                <TableHead className="w-[140px] text-xs font-semibold text-muted-foreground">Order #</TableHead>
-                <TableHead className="w-[210px] text-xs font-semibold text-muted-foreground">Patient & MRN</TableHead>
-                <TableHead className="min-w-[220px] text-xs font-semibold text-muted-foreground">Diagnostic Panel</TableHead>
-                <TableHead className="w-[110px] text-xs font-semibold text-muted-foreground">Priority</TableHead>
-                <TableHead className="w-[130px] text-xs font-semibold text-muted-foreground">Status</TableHead>
-                <TableHead className="w-[180px] text-xs font-semibold text-muted-foreground">Requisitioned By</TableHead>
-                <TableHead className="text-right w-[150px] text-xs font-semibold text-muted-foreground">Actions</TableHead>
+                <TableHead className="w-[140px] pl-6 font-medium text-sm text-muted-foreground py-3.5">Order #</TableHead>
+                <TableHead className="w-[240px] font-medium text-sm text-muted-foreground py-3.5">Patient & MRN</TableHead>
+                <TableHead className="min-w-[220px] font-medium text-sm text-muted-foreground py-3.5">Diagnostic Panel</TableHead>
+                <TableHead className="w-[120px] font-medium text-sm text-muted-foreground py-3.5">Priority</TableHead>
+                <TableHead className="w-[140px] font-medium text-sm text-muted-foreground py-3.5">Status</TableHead>
+                <TableHead className="w-[200px] font-medium text-sm text-muted-foreground py-3.5">Requisitioned By</TableHead>
+                <TableHead className="text-right pr-6 w-[170px] font-medium text-sm text-muted-foreground py-3.5">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-16 text-center text-xs text-muted-foreground">
+                  <TableCell colSpan={7} className="py-20 text-center text-sm text-muted-foreground">
                     <Loader2 className="size-5 animate-spin mx-auto mb-2 text-primary" />
                     Synchronizing diagnostic orders...
                   </TableCell>
                 </TableRow>
               ) : visibleOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-16 text-center text-xs text-muted-foreground">
+                  <TableCell colSpan={7} className="py-20 text-center text-sm text-muted-foreground">
                     <Beaker className="size-8 mx-auto mb-2 text-muted-foreground opacity-40" />
                     No diagnostic orders found matching the filter criteria.
                   </TableCell>
@@ -600,28 +597,35 @@ export default function LabsPage() {
                   const isCompleted = order.status === 'VERIFIED' || order.status === 'REVIEWED' || order.status === 'COMPLETED';
 
                   return (
-                    <TableRow key={order.id} className="hover:bg-muted/40 transition-colors border-b border-border/70">
+                    <TableRow
+                      key={order.id}
+                      onClick={() => setSelectedOrderForFindings(order)}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors group border-b border-border/70"
+                      title="Click to view diagnostic order details"
+                    >
                       {/* Column 1: Order # */}
-                      <TableCell>
-                        <div className="font-mono font-medium text-xs text-foreground">
+                      <TableCell className="pl-6 py-4">
+                        <div className="font-mono font-medium text-xs text-muted-foreground bg-muted/60 px-2 py-1 rounded border border-border inline-block">
                           {order.orderNumber}
                         </div>
-                        <div className="text-[11px] text-muted-foreground mt-0.5">
-                          {new Date(order.requestedAt).toLocaleDateString()}
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {new Date(order.requestedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                       </TableCell>
 
                       {/* Column 2: Patient Identity */}
-                      <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <Avatar className="size-8 border border-border text-xs font-semibold text-foreground bg-muted shrink-0">
-                            <AvatarFallback>{initials}</AvatarFallback>
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-3.5">
+                          <Avatar className="h-10 w-10 border border-border text-xs shrink-0">
+                            <AvatarFallback className="text-xs font-semibold text-muted-foreground bg-muted">
+                              {initials}
+                            </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <div className="font-semibold text-xs text-foreground leading-tight truncate max-w-[130px]">
+                            <div className="font-semibold text-sm text-foreground leading-snug truncate">
                               {order.patientName}
                             </div>
-                            <div className="font-mono text-[11px] text-muted-foreground mt-0.5">
+                            <div className="font-mono text-xs text-muted-foreground mt-0.5">
                               {order.mrn}
                             </div>
                           </div>
@@ -629,62 +633,63 @@ export default function LabsPage() {
                       </TableCell>
 
                       {/* Column 3: Diagnostic Panel */}
-                      <TableCell>
-                        <div className="font-medium text-foreground text-xs leading-snug">
+                      <TableCell className="py-4">
+                        <div className="font-medium text-sm text-foreground leading-snug">
                           {order.testName}
                         </div>
-                        <div className="text-[11px] text-muted-foreground mt-0.5">
+                        <div className="text-xs text-muted-foreground mt-0.5">
                           {order.testCategory}
                         </div>
                       </TableCell>
 
                       {/* Column 4: Priority */}
-                      <TableCell>{renderPriorityBadge(order.priority)}</TableCell>
+                      <TableCell className="py-4">{renderPriorityBadge(order.priority)}</TableCell>
 
                       {/* Column 5: Status */}
-                      <TableCell>{renderStatusBadge(order.status)}</TableCell>
+                      <TableCell className="py-4">{renderStatusBadge(order.status)}</TableCell>
 
                       {/* Column 6: Requisitioned By */}
-                      <TableCell>
-                        <div className="flex items-center gap-1.5 text-xs text-foreground font-medium whitespace-nowrap">
-                          <Stethoscope className="size-3.5 text-primary shrink-0" />
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-2 text-sm font-medium text-foreground whitespace-nowrap">
+                          <Stethoscope className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span>{order.requestedBy}</span>
                         </div>
                       </TableCell>
 
                       {/* Column 7: Actions */}
-                      <TableCell className="text-right">
-                        {isPendingCollection ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleMarkCollected(order)}
-                            className="text-xs h-8 px-2.5 border-border hover:bg-muted font-medium cursor-pointer"
-                          >
-                            <FlaskConical className="size-3.5 mr-1 text-purple-500" />
-                            <span>Collect Specimen</span>
-                          </Button>
-                        ) : isAwaitingResults ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedOrderForEntry(order)}
-                            className="text-xs h-8 px-2.5 border-border hover:bg-muted font-medium cursor-pointer"
-                          >
-                            <Plus className="size-3.5 mr-1 text-sky-500" />
-                            <span>Input Findings</span>
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedOrderForFindings(order)}
-                            className="text-xs text-foreground hover:bg-muted h-8 px-2.5 cursor-pointer font-medium"
-                          >
-                            <Eye className="size-3.5 mr-1 text-muted-foreground" />
-                            <span>{isResulted ? 'Verify & Sign' : 'View Findings'}</span>
-                          </Button>
-                        )}
+                      <TableCell className="pr-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                          {isPendingCollection ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleMarkCollected(order)}
+                              className="text-xs h-8 px-3 border-border hover:bg-muted font-medium cursor-pointer"
+                            >
+                              <FlaskConical className="size-3.5 mr-1.5 text-purple-500" />
+                              <span>Collect Specimen</span>
+                            </Button>
+                          ) : isAwaitingResults ? (
+                            <Button
+                              size="sm"
+                              onClick={() => setSelectedOrderForEntry(order)}
+                              className="text-xs h-8 px-3 gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+                            >
+                              <Plus className="size-3.5" />
+                              <span>Input Findings</span>
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedOrderForFindings(order)}
+                              className="text-xs text-foreground hover:bg-muted h-8 px-3 cursor-pointer font-medium border-border"
+                            >
+                              <Eye className="size-3.5 mr-1.5 text-muted-foreground" />
+                              <span>{isResulted ? 'Verify & Sign' : 'View Findings'}</span>
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

@@ -1,6 +1,6 @@
 # 🛡️ CareSync DevOps & Infrastructure Defense Guide [DEV-104]
 
-This document serves as the master engineering reference for the DevOps Lead (`@Luziel Artiaga`) and the CareSync engineering team during project defense and technical Q&A.
+This document serves as the master engineering reference for the DevOps Lead (**John Loyd Balbuena**) and the CareSync engineering team (**Harris Asani**, **Edson Sode**, **Christian Jay Harris**) during project defense and technical Q&A.
 
 ---
 
@@ -8,7 +8,7 @@ This document serves as the master engineering reference for the DevOps Lead (`@
 
 ```mermaid
 flowchart TD
-    Client["Client Browsers (Clinical Desks, Mobile, Tablets)"] -->|HTTPS / Port 3001| NextJS["Frontend: Next.js 16 (App Router + Turbopack)"]
+    Client["Client Browsers (Clinical Desks, In-Hospital Tablets)"] -->|HTTPS / Port 3001| NextJS["Frontend: Next.js 16 (App Router + Turbopack)"]
     NextJS -->|REST API / Bearer JWT| NestJS["Backend: NestJS 10 (Fastify / Express API)"]
     
     subgraph Data Tier
@@ -60,30 +60,23 @@ flowchart TD
 > **Answer**: *"CareSync is engineered with high fault tolerance. Our `RedisService` wraps all cache operations in try-catch guards. If the Redis container goes down or network partition occurs, the backend automatically transitions to an in-memory fallback cache. Clinical consultation charting, patient intakes, and diagnostic workflows proceed uninterrupted without throwing unhandled 500 errors."*
 
 ### Q2: "How do you ensure zero data loss during database schema updates or migrations?"
-> **Answer**: *"We maintain automated CI/CD schema verification in GitHub Actions (`.github/workflows/ci.yml`). Every commit validates that existing migrations run cleanly against an isolated test database. In production, our pre-deployment hook executes `scripts/backup-db.sh` to take a full snapshot before executing TypeORM migrations. If a migration fails, the transaction automatically rolls back."*
+> **Answer**: *"We maintain automated CI/CD schema verification in GitHub Actions (`.github/workflows/ci.yml`). Every commit validates that existing migrations run cleanly against an isolated test database. In production, our pre-deployment hook executes `scripts/backup-db.sh` or `scripts/backup-db.ps1` to take a full snapshot before executing TypeORM migrations. If a migration fails, the transaction automatically rolls back."*
 
 ### Q3: "How is Protected Health Information (PHI) secured at rest in the database?"
-> **Answer**: *"Beyond disk-level encryption, CareSync implements application-level AES-256-GCM envelope encryption via our `CryptoService`. Sensitive patient fields (e.g. National ID, masked telephone numbers) are encrypted with a 32-byte cryptographically secure key and authenticated with a 16-byte GCM authentication tag before hitting PostgreSQL. Even if a raw database dump is compromised, patient identities remain unreadable."*
+> **Answer**: *"Beyond disk-level encryption, CareSync implements application-level AES-256-GCM envelope encryption via our `CryptoService`. Sensitive patient fields (e.g. National ID, telephone numbers) are encrypted with a 32-byte cryptographically secure key and authenticated with a 16-byte GCM authentication tag before hitting PostgreSQL. Even if a raw database dump is compromised, patient identities remain unreadable."*
 
 ---
 
 ## 🚀 5. Live Presentation Quick-Start Commands
 
 ```powershell
-# 1. Start Backend API
-cd backend
-npm run start:dev
+# 1. Reset & Seed Live Database with Demo Data (Under 2 Seconds)
+powershell -ExecutionPolicy Bypass -File .\scripts\reset-demo.ps1
 
-# 2. Start Frontend Next.js Client
+# 2. Run Complete Backend Test Suite Verification (56/56 Tests Green)
+cmd /c "npm test"
+
+# 3. Verify Frontend Production Build (11/11 Static Pages Generated)
 cd frontend
-npm run dev -- -p 3001
-
-# 3. Verify Health Probes
-curl.exe http://localhost:3000/api/v1/health
-curl.exe http://localhost:3001
-
-# 4. Run Test Verification (52 Tests)
-cd backend
-npm test
+cmd /c "npm run build"
 ```
-
