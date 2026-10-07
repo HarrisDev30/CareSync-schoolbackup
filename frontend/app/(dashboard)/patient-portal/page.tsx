@@ -27,13 +27,16 @@ import {
   fetchPatientPortalData,
   ELEANOR_VITALS,
   ELEANOR_MEDICATIONS,
+  fetchConsultations,
+  getStoredDischargeSummary,
 } from '@/lib/api';
-import { Patient, Appointment, LabOrder, PatientVital, PatientMedication } from '@/types';
+import { Patient, Appointment, LabOrder, PatientVital, PatientMedication, Consultation, DischargeSummary } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { MedicalRecordExportModal } from '@/components/medical-record-export-modal';
 
 function PatientPortalContent() {
   const searchParams = useSearchParams();
@@ -47,14 +50,24 @@ function PatientPortalContent() {
     vitals: PatientVital[];
     medications: PatientMedication[];
   } | null>(null);
+  const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [dischargeSummary, setDischargeSummary] = useState<DischargeSummary | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
-        const portalData = await fetchPatientPortalData('MRN-90214');
+        const [portalData, conNotes] = await Promise.all([
+          fetchPatientPortalData('MRN-90214'),
+          fetchConsultations('p-1'),
+        ]);
         setData(portalData);
+        setConsultations(conNotes);
+        if (portalData?.patient?.id) {
+          setDischargeSummary(getStoredDischargeSummary(portalData.patient.id));
+        }
       } catch {
         // Fallback
       } finally {
@@ -129,6 +142,15 @@ function PatientPortalContent() {
           </div>
 
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsExportModalOpen(true)}
+              className="bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border-emerald-400/40 text-xs h-9 cursor-pointer backdrop-blur-xs shadow-xs"
+            >
+              <Download className="size-3.5 mr-1.5 text-emerald-300" />
+              <span>Export Health Record</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -725,6 +747,20 @@ function PatientPortalContent() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* 1-Click Official Certified EHR Medical Record Export Modal */}
+      {data && (
+        <MedicalRecordExportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          patient={data.patient}
+          consultations={consultations}
+          vitals={data.vitals}
+          medications={data.medications}
+          labOrders={data.labOrders}
+          dischargeSummary={dischargeSummary}
+        />
+      )}
     </div>
   );
 }

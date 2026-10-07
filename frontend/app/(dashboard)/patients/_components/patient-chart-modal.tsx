@@ -23,12 +23,16 @@ import {
   Plus,
   ChevronRight,
   RefreshCw,
+  Pill,
+  FileCheck,
 } from 'lucide-react';
 import {
   Patient,
   Consultation,
   VitalSigns,
   CreateConsultationInput,
+  PatientMedication,
+  DischargeSummary,
 } from '@/types';
 import {
   Dialog,
@@ -57,7 +61,12 @@ import {
   fetchConsultations,
   createConsultation,
   finalizeConsultation,
+  getStoredMedications,
+  createPrescription,
+  dischargePatient,
+  getStoredDischargeSummary,
 } from '@/lib/api';
+import { MedicalRecordExportModal } from '@/components/medical-record-export-modal';
 
 interface PatientChartModalProps {
   patient: Patient | null;
@@ -74,6 +83,16 @@ const ICD10_PRESETS = [
   { code: 'M54.5', label: 'Low Back Pain', desc: 'Low Back Pain, unspecified' },
   { code: 'J06.9', label: 'Acute URI', desc: 'Acute Upper Respiratory Infection, unspecified' },
   { code: 'K21.9', label: 'GERD', desc: 'Gastro-esophageal Reflux Disease without esophagitis' },
+];
+
+// E-Prescription Medication Presets
+const RX_PRESETS = [
+  { name: 'Lisinopril', dosage: '10 mg', freq: 'Once daily in morning', sig: 'Take 1 tablet by mouth daily in the morning with water.' },
+  { name: 'Atorvastatin', dosage: '20 mg', freq: 'Once daily at bedtime', sig: 'Take 1 tablet orally once per day at bedtime.' },
+  { name: 'Metformin', dosage: '500 mg', freq: 'Twice daily with meals', sig: 'Take 1 tablet by mouth twice daily with morning and evening meals.' },
+  { name: 'Amoxicillin', dosage: '500 mg', freq: 'Every 8 hours for 10 days', sig: 'Take 1 capsule by mouth every 8 hours until full course completed.' },
+  { name: 'Albuterol Inhaler', dosage: '90 mcg/actuation', freq: 'As needed (PRN)', sig: 'Inhale 2 puffs every 4-6 hours as needed for bronchospasm/wheezing.' },
+  { name: 'Omeprazole', dosage: '20 mg', freq: 'Once daily before breakfast', sig: 'Take 1 capsule orally once daily 30 minutes before morning meal.' },
 ];
 
 // Clinical Evaluation Helpers
@@ -162,13 +181,35 @@ export function PatientChartModal({
   onConsultationSaved,
 }: PatientChartModalProps) {
   // Tabs & Navigation
-  const [activeTab, setActiveTab] = useState<'history' | 'soap' | 'vitals' | 'demographics'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'soap' | 'vitals' | 'prescriptions' | 'demographics'>('history');
+
+  // Export Modal State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Consultations State
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Medications & E-Prescriptions State
+  const [medications, setMedications] = useState<PatientMedication[]>([]);
+  const [dischargeSummary, setDischargeSummary] = useState<DischargeSummary | null>(null);
+
+  // E-Prescription Input Form
+  const [rxName, setRxName] = useState('');
+  const [rxDosage, setRxDosage] = useState('');
+  const [rxFrequency, setRxFrequency] = useState('Once daily');
+  const [rxInstructions, setRxInstructions] = useState('');
+  const [rxDuration, setRxDuration] = useState('30 days');
+  const [rxRefills, setRxRefills] = useState('1');
+  const [isIssuingRx, setIsIssuingRx] = useState(false);
+
+  // Discharge Form State
+  const [dischargeDisposition, setDischargeDisposition] = useState<DischargeSummary['disposition']>('Home / Self-Care');
+  const [dischargeNotes, setDischargeNotes] = useState('');
+  const [dischargeFollowUp, setDischargeFollowUp] = useState('');
+  const [isDischarging, setIsDischarging] = useState(false);
 
   // New SOAP Encounter Form State
   const [attendingPhysician, setAttendingPhysician] = useState('');
@@ -188,11 +229,15 @@ export function PatientChartModal({
   const [respiratoryRate, setRespiratoryRate] = useState('16');
   const [weightKg, setWeightKg] = useState('68.5');
 
-  // Load consultations when patient opens
+  // Load consultations, medications, and discharge status when patient opens
   useEffect(() => {
     if (!patient) return;
 
     setAttendingPhysician(patient.primaryPhysician || PHYSICIAN_PRESETS[0]?.name || 'Dr. Sarah Chen, MD');
+
+    // Load Medications & Discharge Summary
+    setMedications(getStoredMedications(patient.id));
+    setDischargeSummary(getStoredDischargeSummary(patient.id));
 
     setIsLoadingNotes(true);
     fetchConsultations(patient.id)
@@ -241,6 +286,78 @@ export function PatientChartModal({
   const hrEval = evaluateHeartRate(currentVitalSigns.heartRate);
   const spo2Eval = evaluateSpO2(currentVitalSigns.oxygenSaturation);
   const tempEval = evaluateTemperature(currentVitalSigns.temperatureCelsius);
+
+  // Issue E-Prescription Handler
+  const handleIssuePrescription = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rxName.trim() || !rxDosage.trim()) {
+      showNotice('error', 'Please specify medication name and dosage.');
+      return;
+    }
+    setIsIssuingRx(true);
+    try {
+      const res = await createPrescription({
+        patientId: patient.id,
+        name: rxName,
+        dosage: rxDosage,
+        frequency: rxFrequency,
+        prescribedBy: attendingPhysician || patient.primaryPhysician || 'Dr. Sarah Chen, MD',
+        instructions: rxInstructions || `Take ${rxDosage} ${rxFrequency.toLowerCase()} as prescribed.`,
+        duration: rxDuration,
+        refills: parseInt(rxRefills, 10) || 0,
+      });
+      if (res.success && res.data) {
+        setMedications((prev) => [res.data!, ...prev]);
+        setRxName('');
+        setRxDosage('');
+        setRxInstructions('');
+        showNotice('success', `E-Prescription issued for ${res.data.name} (${res.data.dosage}). Logged to HIPAA audit stream.`);
+      } else {
+        showNotice('error', res.error || 'Failed to issue prescription.');
+      }
+    } catch (err: any) {
+      showNotice('error', err?.message || 'Error creating prescription.');
+    } finally {
+      setIsIssuingRx(false);
+    }
+  };
+
+  const handleApplyRxPreset = (preset: (typeof RX_PRESETS)[0]) => {
+    setRxName(preset.name);
+    setRxDosage(preset.dosage);
+    setRxFrequency(preset.freq);
+    setRxInstructions(preset.sig);
+  };
+
+  // Patient Discharge Handler
+  const handleDischargePatient = async () => {
+    if (!dischargeNotes.trim()) {
+      showNotice('error', 'Please enter discharge clinical notes and patient transition instructions.');
+      return;
+    }
+    setIsDischarging(true);
+    try {
+      const res = await dischargePatient(patient.id, {
+        dischargedBy: attendingPhysician || patient.primaryPhysician || 'Dr. Sarah Chen, MD',
+        disposition: dischargeDisposition,
+        dischargeNotes,
+        followUpInstructions: dischargeFollowUp || 'Follow up with primary care physician in 2-4 weeks or as clinically indicated.',
+        reconciliationCompleted: true,
+      });
+      if (res.success && res.data) {
+        setDischargeSummary(res.data);
+        patient.status = 'Discharged';
+        showNotice('success', `Patient successfully discharged with disposition: ${dischargeDisposition}. Formal record updated.`);
+        onConsultationSaved?.();
+      } else {
+        showNotice('error', res.error || 'Failed to complete patient discharge.');
+      }
+    } catch (err: any) {
+      showNotice('error', err?.message || 'Error processing discharge.');
+    } finally {
+      setIsDischarging(false);
+    }
+  };
 
   // Submit or Draft New SOAP Note
   const handleSaveConsultation = async (targetStatus: 'DRAFT' | 'FINALIZED') => {
@@ -353,7 +470,8 @@ export function PatientChartModal({
   const historyVitals = patient.fullName.includes('Eleanor') ? ELEANOR_VITALS : [];
 
   return (
-    <Dialog open={!!patient} onOpenChange={(open) => !open && onClose()}>
+    <>
+      <Dialog open={!!patient} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-0 bg-card text-card-foreground border-border overflow-hidden shadow-2xl">
         {/* 1. COMPREHENSIVE PATIENT BANNER HEADER */}
         <div className="p-5 border-b border-border bg-muted/20 shrink-0">
@@ -398,6 +516,16 @@ export function PatientChartModal({
 
             {/* Quick Actions */}
             <div className="flex items-center gap-2 self-start sm:self-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsExportModalOpen(true)}
+                className="h-8 text-xs gap-1.5 cursor-pointer bg-primary/10 text-primary hover:bg-primary/20 border-primary/30 shadow-2xs"
+                title="Export Official 1-Click EHR Medical Record"
+              >
+                <FileText className="size-3.5" />
+                <span>Export Official Record</span>
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -468,7 +596,7 @@ export function PatientChartModal({
           className="flex-1 flex flex-col overflow-hidden"
         >
           <div className="px-5 pt-3 pb-2 border-b border-border bg-card shrink-0">
-            <TabsList className="grid grid-cols-4 w-full h-10 bg-muted p-1 border border-border">
+            <TabsList className="grid grid-cols-5 w-full h-10 bg-muted p-1 border border-border">
               <TabsTrigger value="history" className="text-xs font-medium gap-1.5 cursor-pointer">
                 <History className="size-3.5" />
                 <span className="hidden sm:inline">Clinical Notes</span>
@@ -481,14 +609,24 @@ export function PatientChartModal({
               </TabsTrigger>
               <TabsTrigger value="soap" className="text-xs font-medium gap-1.5 cursor-pointer">
                 <FileSignature className="size-3.5" />
-                <span className="hidden sm:inline">New SOAP Encounter</span>
-                <span className="sm:hidden">New SOAP</span>
+                <span className="hidden sm:inline">New SOAP</span>
+                <span className="sm:hidden">SOAP</span>
               </TabsTrigger>
               <TabsTrigger value="vitals" className="text-xs font-medium gap-1.5 cursor-pointer">
                 <Activity className="size-3.5 text-primary" />
-                <span className="hidden sm:inline">Live Vitals Intake</span>
+                <span className="hidden sm:inline">Live Vitals</span>
                 <span className="sm:hidden">Vitals</span>
                 <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
+              </TabsTrigger>
+              <TabsTrigger value="prescriptions" className="text-xs font-medium gap-1.5 cursor-pointer">
+                <Pill className="size-3.5 text-amber-600 dark:text-amber-400" />
+                <span className="hidden sm:inline">Rx & Discharge</span>
+                <span className="sm:hidden">Rx</span>
+                {medications.length > 0 && (
+                  <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-mono ml-0.5">
+                    {medications.length}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="demographics" className="text-xs font-medium gap-1.5 cursor-pointer">
                 <User className="size-3.5" />
@@ -1214,7 +1352,335 @@ export function PatientChartModal({
             </TabsContent>
 
             {/* ======================================================== */}
-            {/* TAB 4: DEMOGRAPHICS, ALLERGIES & EMERGENCY CONTACTS */}
+            {/* TAB 4: PRESCRIPTIONS (Rx) & PATIENT DISCHARGE SUMMARY */}
+            {/* ======================================================== */}
+            <TabsContent value="prescriptions" className="mt-0 space-y-6">
+              {/* 1. ACTIVE MEDICATIONS TABLE */}
+              <div className="border border-border rounded-xl p-4 bg-card shadow-xs space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Pill className="size-4 text-amber-600 dark:text-amber-400" />
+                      Active Pharmacotherapy & Prescriptions
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Medications authorized by attending medical staff with dispense instructions.
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-xs font-mono self-start sm:self-center">
+                    {medications.length} Prescribed Item(s)
+                  </Badge>
+                </div>
+
+                {medications.length > 0 ? (
+                  <div className="divide-y divide-border/60">
+                    {medications.map((med) => (
+                      <div
+                        key={med.id}
+                        className="py-3 first:pt-1 last:pb-1 flex flex-col sm:flex-row sm:items-start justify-between gap-3 text-xs"
+                      >
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-foreground text-sm">{med.name}</span>
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] font-mono uppercase px-2 py-0.2 ${
+                                med.status === 'Active'
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                  : 'bg-muted text-muted-foreground border-border'
+                              }`}
+                            >
+                              {med.status}
+                            </Badge>
+                            <span className="text-[11px] font-mono text-muted-foreground">Since {med.startDate}</span>
+                          </div>
+                          <div className="text-xs font-semibold text-primary font-mono">
+                            {med.dosage} • {med.frequency}
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed pt-0.5">
+                            <span className="font-semibold text-foreground">Sig:</span> {med.instructions}
+                          </p>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground font-mono text-right shrink-0">
+                          Prescribed by: <strong className="text-foreground">{med.prescribedBy}</strong>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-lg bg-muted/20 text-center text-xs text-muted-foreground italic">
+                    No active medications recorded for this patient. Use the form below to issue an e-prescription.
+                  </div>
+                )}
+              </div>
+
+              {/* 2. ISSUE NEW E-PRESCRIPTION FORM */}
+              <div className="border border-border rounded-xl p-4 bg-muted/20 shadow-xs space-y-4">
+                <div className="border-b border-border/80 pb-2.5">
+                  <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <Sparkles className="size-4 text-primary" />
+                    Issue New Electronic Prescription (e-Rx)
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Select a hospital formulary preset or enter custom pharmacological orders.
+                  </p>
+                </div>
+
+                {/* Formulary Quick Chips */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                    Hospital Formulary Presets (1-Click Fill)
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {RX_PRESETS.map((preset) => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => handleApplyRxPreset(preset)}
+                        className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-background border border-border hover:bg-primary/10 hover:border-primary/40 hover:text-primary transition-colors cursor-pointer text-foreground shadow-2xs"
+                      >
+                        {preset.name} {preset.dosage}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <form onSubmit={handleIssuePrescription} className="space-y-3 pt-1">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-muted-foreground font-medium">Medication Name *</label>
+                      <Input
+                        value={rxName}
+                        onChange={(e) => setRxName(e.target.value)}
+                        placeholder="e.g. Lisinopril"
+                        className="h-9 text-xs bg-background border-border"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-muted-foreground font-medium">Dosage *</label>
+                      <Input
+                        value={rxDosage}
+                        onChange={(e) => setRxDosage(e.target.value)}
+                        placeholder="e.g. 10 mg PO"
+                        className="h-9 text-xs bg-background border-border"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-muted-foreground font-medium">Frequency</label>
+                      <Input
+                        value={rxFrequency}
+                        onChange={(e) => setRxFrequency(e.target.value)}
+                        placeholder="e.g. Once daily in morning"
+                        className="h-9 text-xs bg-background border-border"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <label className="text-muted-foreground font-medium">Duration</label>
+                        <Input
+                          value={rxDuration}
+                          onChange={(e) => setRxDuration(e.target.value)}
+                          placeholder="30 days"
+                          className="h-9 text-xs bg-background border-border"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-muted-foreground font-medium">Refills</label>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="5"
+                          value={rxRefills}
+                          onChange={(e) => setRxRefills(e.target.value)}
+                          className="h-9 text-xs bg-background border-border"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground font-medium text-xs">
+                      Dispense Instructions (Sig / Patient Guidelines)
+                    </label>
+                    <Input
+                      value={rxInstructions}
+                      onChange={(e) => setRxInstructions(e.target.value)}
+                      placeholder="e.g. Take 1 tablet by mouth daily in the morning with a full glass of water."
+                      className="h-9 text-xs bg-background border-border"
+                    />
+                  </div>
+
+                  <div className="pt-1 flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground font-mono">
+                      Attending Prescriber: <strong>{attendingPhysician || patient.primaryPhysician}</strong>
+                    </span>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      disabled={isIssuingRx || !rxName.trim() || !rxDosage.trim()}
+                      className="h-8 text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      <Pill className="size-3.5" />
+                      <span>{isIssuingRx ? 'Transmitting...' : 'Sign & Issue E-Prescription'}</span>
+                    </Button>
+                  </div>
+                </form>
+              </div>
+
+              {/* 3. PATIENT DISCHARGE SUMMARY & CLINICAL DISPOSITION */}
+              <div className="border border-border rounded-xl p-4 bg-card shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <FileCheck className="size-4 text-emerald-600" />
+                      Clinical Discharge Summary & Patient Disposition
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Formal discharge authorization, outpatient transition plan, and medical records closure.
+                    </p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={`text-xs font-mono font-bold self-start sm:self-center ${
+                      patient.status === 'Discharged'
+                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                        : 'bg-primary/10 text-primary border-primary/30'
+                    }`}
+                  >
+                    Status: {patient.status}
+                  </Badge>
+                </div>
+
+                {patient.status === 'Discharged' || dischargeSummary ? (
+                  <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-3 text-xs">
+                    <div className="flex items-center justify-between text-emerald-800 dark:text-emerald-300 font-semibold border-b border-emerald-500/20 pb-2">
+                      <span className="flex items-center gap-1.5">
+                        <CheckCircle2 className="size-4 text-emerald-600" />
+                        Patient Formally Discharged from Clinical Care
+                      </span>
+                      <span className="font-mono text-[11px]">
+                        {dischargeSummary?.dischargedAt ? new Date(dischargeSummary.dischargedAt).toLocaleDateString() : 'Discharge Confirmed'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Clinical Disposition</span>
+                        <strong className="text-foreground">{dischargeSummary?.disposition || 'Routine Outpatient Release'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[11px]">Authorizing Clinician</span>
+                        <strong className="text-foreground">{dischargeSummary?.dischargedBy || attendingPhysician}</strong>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground block text-[11px]">Clinical Discharge Notes</span>
+                        <p className="text-foreground leading-relaxed">
+                          {dischargeSummary?.dischargeNotes || 'Patient evaluated and cleared for outpatient recovery.'}
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground block text-[11px]">Follow-Up Plan</span>
+                        <p className="text-foreground leading-relaxed">
+                          {dischargeSummary?.followUpInstructions || 'Routine follow-up in 2-4 weeks or as symptoms dictate.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <Button
+                        size="sm"
+                        onClick={() => setIsExportModalOpen(true)}
+                        className="h-8 text-xs gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
+                        <FileText className="size-3.5" />
+                        <span>Export Certified Discharge EHR Record</span>
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div className="space-y-1">
+                        <label className="text-muted-foreground font-medium">Discharge Disposition *</label>
+                        <Select
+                          value={dischargeDisposition}
+                          onValueChange={(val: any) => setDischargeDisposition(val)}
+                        >
+                          <SelectTrigger className="w-full h-9 text-xs bg-background border-border">
+                            <SelectValue placeholder="Select disposition..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover dark:bg-card border-border shadow-xl z-50">
+                            <SelectItem value="Home / Self-Care" className="text-xs">Home / Self-Care</SelectItem>
+                            <SelectItem value="Specialist Referral" className="text-xs">Specialist Referral</SelectItem>
+                            <SelectItem value="Transfer to Tertiary Facility" className="text-xs">Transfer to Tertiary Facility</SelectItem>
+                            <SelectItem value="Home Health Care" className="text-xs">Home Health Care</SelectItem>
+                            <SelectItem value="Routine Outpatient Release" className="text-xs">Routine Outpatient Release</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-muted-foreground font-medium">Authorizing Clinician</label>
+                        <Input
+                          value={attendingPhysician || patient.primaryPhysician || 'Dr. Sarah Chen, MD'}
+                          readOnly
+                          className="h-9 text-xs bg-muted/40 font-mono text-muted-foreground border-border"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <label className="text-muted-foreground font-medium">
+                        Clinical Discharge Instructions & Care Plan *
+                      </label>
+                      <Textarea
+                        value={dischargeNotes}
+                        onChange={(e) => setDischargeNotes(e.target.value)}
+                        placeholder="Detail patient clinical stability, wound care/activity guidelines, medication reconciliation, and emergency warning signs..."
+                        className="min-h-[75px] text-xs bg-background border-border"
+                      />
+                    </div>
+
+                    <div className="space-y-1 text-xs">
+                      <label className="text-muted-foreground font-medium">
+                        Follow-Up Plan & Appointments
+                      </label>
+                      <Input
+                        value={dischargeFollowUp}
+                        onChange={(e) => setDischargeFollowUp(e.target.value)}
+                        placeholder="e.g. Schedule outpatient follow-up in 2 weeks for blood pressure and metabolic panel recheck."
+                        className="h-9 text-xs bg-background border-border"
+                      />
+                    </div>
+
+                    <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="size-4 shrink-0" />
+                        <span>Authorizing discharge transitions patient status to 'Discharged' and generates a certified legal audit event.</span>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={isDischarging || !dischargeNotes.trim()}
+                        onClick={handleDischargePatient}
+                        className="h-8 text-xs gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+                      >
+                        <FileCheck className="size-3.5" />
+                        <span>{isDischarging ? 'Discharging...' : 'Discharge Patient'}</span>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ======================================================== */}
+            {/* TAB 5: DEMOGRAPHICS, ALLERGIES & EMERGENCY CONTACTS */}
             {/* ======================================================== */}
             <TabsContent value="demographics" className="mt-0 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1314,5 +1780,16 @@ export function PatientChartModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <MedicalRecordExportModal
+      isOpen={isExportModalOpen}
+      onClose={() => setIsExportModalOpen(false)}
+      patient={patient}
+      consultations={consultations}
+      vitals={historyVitals}
+      medications={medications}
+      dischargeSummary={dischargeSummary}
+    />
+  </>
   );
 }

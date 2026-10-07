@@ -16,6 +16,9 @@ import {
   StaffUser,
   PatientVital,
   PatientMedication,
+  PatientStatus,
+  CreatePrescriptionInput,
+  DischargeSummary,
 } from '../types';
 
 export const STAFF_PRESETS: StaffUser[] = [
@@ -1521,7 +1524,169 @@ export async function fetchPatientPortalData(mrn = 'MRN-90214') {
     appointments,
     labOrders,
     vitals: ELEANOR_VITALS,
-    medications: ELEANOR_MEDICATIONS,
+    medications: getStoredMedications(patient?.id),
   };
+}
+
+export const MEDICATIONS_STORAGE_KEY = 'caresync_local_medications';
+export const DISCHARGES_STORAGE_KEY = 'caresync_local_discharges';
+export const AUDIT_LOGS_STORAGE_KEY = 'caresync_local_audit_logs';
+
+export function getStoredAuditLogs(): AuditLogEntry[] {
+  if (typeof window === 'undefined') return [...INITIAL_AUDIT_LOGS];
+  try {
+    const saved = localStorage.getItem(AUDIT_LOGS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return [...INITIAL_AUDIT_LOGS];
+}
+
+export function saveStoredAuditLogs(logs: AuditLogEntry[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(AUDIT_LOGS_STORAGE_KEY, JSON.stringify(logs));
+  } catch {
+    // ignore
+  }
+}
+
+export function recordAuditLogEntry(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>): AuditLogEntry {
+  const fullEntry: AuditLogEntry = {
+    id: `aud-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    timestamp: new Date().toISOString(),
+    ...entry,
+  };
+  const current = getStoredAuditLogs();
+  const updated = [fullEntry, ...current];
+  saveStoredAuditLogs(updated);
+  localAuditLogs = updated;
+  return fullEntry;
+}
+
+export function getStoredMedications(patientId?: string): PatientMedication[] {
+  if (typeof window === 'undefined') return [...ELEANOR_MEDICATIONS];
+  try {
+    const saved = localStorage.getItem(MEDICATIONS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return [...ELEANOR_MEDICATIONS];
+}
+
+export function saveStoredMedications(meds: PatientMedication[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(MEDICATIONS_STORAGE_KEY, JSON.stringify(meds));
+  } catch {
+    // ignore
+  }
+}
+
+export async function createPrescription(
+  input: CreatePrescriptionInput,
+): Promise<{ success: boolean; data?: PatientMedication; error?: string }> {
+  if (!input.name?.trim() || !input.dosage?.trim()) {
+    return { success: false, error: 'Medication name and dosage are required.' };
+  }
+
+  const newMed: PatientMedication = {
+    id: `med-${Date.now()}`,
+    name: input.name.trim(),
+    dosage: input.dosage.trim(),
+    frequency: input.frequency?.trim() || 'Once daily',
+    prescribedBy: input.prescribedBy?.trim() || 'Dr. Sarah Chen, MD',
+    startDate: input.startDate || new Date().toISOString().split('T')[0],
+    instructions: input.instructions?.trim() || 'Take as directed by prescribing physician.',
+    status: 'Active',
+  };
+
+  const current = getStoredMedications();
+  const updated = [newMed, ...current];
+  saveStoredMedications(updated);
+
+  recordAuditLogEntry({
+    action: 'PRESCRIPTION_ISSUED',
+    resource: 'prescriptions',
+    resourceId: newMed.id,
+    userId: 'u-1',
+    userEmail: 'sarah.chen@caresync.org',
+    userRole: 'PHYSICIAN',
+    ipAddress: '192.168.1.42',
+    metadata: {
+      patientId: input.patientId,
+      medicationName: newMed.name,
+      dosage: newMed.dosage,
+      refills: input.refills ?? 0,
+      duration: input.duration || '30 days',
+    },
+  });
+
+  return { success: true, data: newMed };
+}
+
+export function getStoredDischargeSummary(patientId: string): DischargeSummary | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const saved = localStorage.getItem(`${DISCHARGES_STORAGE_KEY}_${patientId}`);
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch {
+    // fallback
+  }
+  return null;
+}
+
+export async function dischargePatient(
+  patientId: string,
+  summary: Omit<DischargeSummary, 'patientId' | 'dischargedAt'>,
+): Promise<{ success: boolean; data?: DischargeSummary; error?: string }> {
+  const fullSummary: DischargeSummary = {
+    patientId,
+    dischargedAt: new Date().toISOString(),
+    ...summary,
+  };
+
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(`${DISCHARGES_STORAGE_KEY}_${patientId}`, JSON.stringify(fullSummary));
+    } catch {
+      // ignore
+    }
+  }
+
+  localPatients = localPatients.map((p) =>
+    p.id === patientId ? { ...p, status: 'Discharged' as PatientStatus } : p,
+  );
+
+  recordAuditLogEntry({
+    action: 'PATIENT_DISCHARGED',
+    resource: 'patients',
+    resourceId: patientId,
+    userId: 'u-1',
+    userEmail: 'sarah.chen@caresync.org',
+    userRole: 'PHYSICIAN',
+    ipAddress: '192.168.1.42',
+    metadata: {
+      disposition: fullSummary.disposition,
+      dischargedBy: fullSummary.dischargedBy,
+      reconciliationCompleted: fullSummary.reconciliationCompleted,
+    },
+  });
+
+  return { success: true, data: fullSummary };
 }
 

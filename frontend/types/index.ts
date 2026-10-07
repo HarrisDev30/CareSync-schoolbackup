@@ -217,4 +217,24 @@ export interface CreateConsultationInput {
   status?: ConsultationStatus;
 }
 
+export interface CreatePrescriptionInput {
+  patientId: string;
+  name: string;
+  dosage: string;
+  frequency: string;
+  prescribedBy: string;
+  instructions: string;
+  duration?: string;
+  refills?: number;
+  startDate?: string;
+}
 
+export interface DischargeSummary {
+  patientId: string;
+  dischargedAt: string;
+  dischargedBy: string;
+  disposition: 'Home / Self-Care' | 'Specialist Referral' | 'Transfer to Tertiary Facility' | 'Home Health Care' | 'Routine Outpatient Release';
+  dischargeNotes: string;
+  followUpInstructions: string;
+  reconciliationCompleted: boolean;
+}
