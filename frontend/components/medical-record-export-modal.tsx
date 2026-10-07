@@ -13,7 +13,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   FileText,
-  X,
   FileCheck,
 } from 'lucide-react';
 import {
@@ -88,7 +87,7 @@ export function MedicalRecordExportModal({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mr-8">
             <Button
               variant="outline"
               size="sm"
@@ -97,14 +96,6 @@ export function MedicalRecordExportModal({
             >
               <Printer className="size-3.5" />
               <span>Print Record / Save PDF</span>
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-8 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-            >
-              <X className="size-4" />
             </Button>
           </div>
         </div>

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   AlertTriangle,
-  Printer,
   Phone,
   User,
   FileText,
@@ -515,7 +514,7 @@ export function PatientChartModal({
             </div>
 
             {/* Quick Actions */}
-            <div className="flex items-center gap-2 self-start sm:self-center">
+            <div className="flex items-center gap-2 self-start sm:self-center mr-8 sm:mr-9">
               <Button
                 variant="outline"
                 size="sm"
@@ -525,16 +524,6 @@ export function PatientChartModal({
               >
                 <FileText className="size-3.5" />
                 <span>Export Official Record</span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => window.print()}
-                className="h-8 text-xs gap-1.5 cursor-pointer text-muted-foreground hover:text-foreground border-border"
-                title="Print EHR Clinical Summary"
-              >
-                <Printer className="size-3.5" />
-                <span className="hidden sm:inline">Print Record</span>
               </Button>
             </div>
           </div>
