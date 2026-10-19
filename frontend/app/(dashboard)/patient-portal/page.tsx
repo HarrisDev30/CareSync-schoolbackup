@@ -127,7 +127,7 @@ function PatientPortalContent() {
     (v) =>
       !q ||
       v.bloodPressure.toLowerCase().includes(q) ||
-      v.notes.toLowerCase().includes(q) ||
+      (v.notes || '').toLowerCase().includes(q) ||
       v.recordedAt.toLowerCase().includes(q),
   );
   const filteredAppointments = appointments.filter(
