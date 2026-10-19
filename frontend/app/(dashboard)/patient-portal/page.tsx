@@ -17,11 +17,16 @@ import {
   Stethoscope,
   Download,
   FileCheck,
+  Plus,
+  CalendarX,
+  X,
+  AlertCircle,
 } from 'lucide-react';
 import {
   fetchPatientPortalData,
   fetchConsultations,
   getStoredDischargeSummary,
+  updateAppointmentStatus,
 } from '@/lib/api';
 import {
   Patient,
@@ -43,6 +48,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MedicalRecordExportModal } from '@/components/medical-record-export-modal';
+import { BookAppointmentModal } from './_components/book-appointment-modal';
+import { CancelAppointmentModal } from './_components/cancel-appointment-modal';
 
 function PatientPortalContent() {
   const searchParams = useSearchParams();
@@ -58,6 +65,9 @@ function PatientPortalContent() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [dischargeSummary, setDischargeSummary] = useState<DischargeSummary | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isBookModalOpen, setIsBookModalOpen] = useState(false);
+  const [cancellingApt, setCancellingApt] = useState<Appointment | null>(null);
+  const [confirmingAptId, setConfirmingAptId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -87,6 +97,63 @@ function PatientPortalContent() {
     }
     load();
   }, []);
+
+  const handleConfirmCheckIn = async (apt: Appointment) => {
+    setConfirmingAptId(apt.id);
+    try {
+      const res = await updateAppointmentStatus(apt.id, 'CONFIRMED');
+      if (res.data) {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                appointments: prev.appointments.map((a) =>
+                  a.id === apt.id ? { ...a, status: 'CONFIRMED' } : a,
+                ),
+              }
+            : prev,
+        );
+        triggerToast(
+          `Arrival check-in confirmed for ${apt.physicianName} (${apt.roomNumber || 'Exam Suite 3B'}). Triage desk notified.`,
+        );
+      }
+    } finally {
+      setConfirmingAptId(null);
+    }
+  };
+
+  const handleAppointmentBooked = (newApt: Appointment) => {
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            appointments: [newApt, ...prev.appointments],
+          }
+        : prev,
+    );
+    triggerToast(
+      `Outpatient visit requested with ${newApt.physicianName} on ${new Date(
+        newApt.scheduledAt,
+      ).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      })}. Added to admissions worklist.`,
+    );
+  };
+
+  const handleAppointmentCancelled = (updatedApt: Appointment) => {
+    setData((prev) =>
+      prev
+        ? {
+            ...prev,
+            appointments: prev.appointments.map((a) =>
+              a.id === updatedApt.id ? updatedApt : a,
+            ),
+          }
+        : prev,
+    );
+    triggerToast(`Appointment with ${updatedApt.physicianName} has been cancelled.`);
+  };
 
   if (loading || !data) {
     return (
@@ -383,93 +450,189 @@ function PatientPortalContent() {
                 Scheduled doctor visits and past outpatient consultations.
               </p>
             </div>
-            <Badge variant="outline" className="w-fit font-mono text-xs py-1 px-3 border-border">
-              {appointments.length} Scheduled Visits
-            </Badge>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <Badge variant="outline" className="w-fit font-mono text-xs py-1 px-3 border-border">
+                {appointments.filter((a) => a.status !== 'CANCELLED').length} Active Visits
+              </Badge>
+              <Button
+                size="sm"
+                onClick={() => setIsBookModalOpen(true)}
+                className="gap-2 h-10 px-4 cursor-pointer active:scale-[0.98] transition-transform bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium shadow-xs"
+              >
+                <Plus className="size-4" />
+                <span>Request Appointment</span>
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {appointments.map((apt) => {
-              const isUpcoming = apt.status === 'SCHEDULED' || apt.status === 'CONFIRMED';
-              return (
-                <Card key={apt.id} className="border-border bg-card shadow-xs rounded-xl">
-                  <CardHeader className="p-4 sm:p-5 pb-3 flex flex-row items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className={`text-xs font-mono uppercase py-0.5 px-2.5 font-medium ${
-                            apt.status === 'CONFIRMED'
-                              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                              : apt.status === 'SCHEDULED'
-                              ? 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                              : 'border-border bg-muted/40 text-muted-foreground'
-                          }`}
-                        >
-                          {apt.status}
-                        </Badge>
-                        <span className="text-xs font-mono text-muted-foreground">
-                          {apt.durationMinutes} mins
-                        </span>
-                      </div>
-                      <CardTitle className="text-base font-semibold text-foreground pt-1">
-                        {apt.reason}
-                      </CardTitle>
+          {appointments.length === 0 ? (
+            <div className="py-16 text-center border border-dashed border-border rounded-xl space-y-3 text-muted-foreground bg-muted/20">
+              <Calendar className="size-10 mx-auto text-muted-foreground stroke-[1.5]" />
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">No appointments currently scheduled</p>
+                <p className="text-xs text-muted-foreground">
+                  You can schedule an in-person outpatient consultation directly with your attending physician.
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setIsBookModalOpen(true)}
+                className="gap-2 h-9 px-4 text-xs font-medium cursor-pointer"
+              >
+                <Plus className="size-3.5" />
+                <span>Schedule First Consultation</span>
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {appointments.map((apt) => {
+                const isScheduled = apt.status === 'SCHEDULED';
+                const isConfirmed = apt.status === 'CONFIRMED';
+                const isCancelled = apt.status === 'CANCELLED';
+                const isCompleted = apt.status === 'COMPLETED';
+                const isInProgress = apt.status === 'IN_PROGRESS';
+                const isUpcoming = isScheduled || isConfirmed;
+                const isConfirmingThis = confirmingAptId === apt.id;
+
+                return (
+                  <Card
+                    key={apt.id}
+                    className={`border-border bg-card shadow-xs rounded-xl flex flex-col justify-between ${
+                      isCancelled ? 'opacity-70 bg-muted/20' : ''
+                    }`}
+                  >
+                    <div>
+                      <CardHeader className="p-4 sm:p-5 pb-3 flex flex-row items-start justify-between gap-3">
+                        <div className="space-y-1 flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge
+                              variant="outline"
+                              className={`text-xs font-mono uppercase py-0.5 px-2.5 font-medium ${
+                                isConfirmed
+                                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                  : isScheduled
+                                  ? 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400'
+                                  : isCancelled
+                                  ? 'border-destructive/30 bg-destructive/10 text-destructive'
+                                  : isCompleted
+                                  ? 'border-border bg-muted/60 text-muted-foreground'
+                                  : 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              }`}
+                            >
+                              {isConfirmed ? 'Pre-Checked In' : apt.status}
+                            </Badge>
+                            <span className="text-xs font-mono text-muted-foreground">
+                              {apt.durationMinutes || 30} mins
+                            </span>
+                          </div>
+                          <CardTitle className="text-base font-semibold text-foreground pt-1 truncate" title={apt.reason}>
+                            {apt.reason}
+                          </CardTitle>
+                        </div>
+                        <Calendar className="size-4 text-muted-foreground shrink-0 mt-1" />
+                      </CardHeader>
+
+                      <CardContent className="p-4 sm:p-5 pt-0 space-y-3">
+                        <div className="p-3 bg-muted/30 rounded-lg border border-border/60 text-xs space-y-1.5">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-foreground">
+                            <span className="font-semibold flex items-center gap-1.5 truncate">
+                              <Stethoscope className="size-3.5 text-primary shrink-0" />
+                              <span>{apt.physicianName}</span>
+                            </span>
+                            <span className="font-mono text-muted-foreground shrink-0">
+                              {apt.roomNumber || 'Exam Suite 3B'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5 text-foreground font-mono pt-1 border-t border-border/60">
+                            <Clock className="size-3.5 text-muted-foreground shrink-0" />
+                            <span>
+                              {new Date(apt.scheduledAt).toLocaleDateString('en-US', {
+                                weekday: 'short',
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+
+                          {apt.notes && (
+                            <div className="text-[11px] text-muted-foreground pt-1 border-t border-border/50 truncate">
+                              {apt.notes}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
                     </div>
-                    <Calendar className="size-4 text-muted-foreground shrink-0 mt-1" />
-                  </CardHeader>
 
-                  <CardContent className="p-4 sm:p-5 pt-0 space-y-3">
-                    <div className="p-3 bg-muted/30 rounded-lg border border-border/60 text-xs space-y-1.5">
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-foreground">
-                        <span className="font-semibold flex items-center gap-1.5">
-                          <Stethoscope className="size-3.5 text-primary shrink-0" />
-                          {apt.physicianName}
-                        </span>
-                        <span className="font-mono text-muted-foreground">
-                          {apt.roomNumber || 'Exam Suite 3B'}
-                        </span>
-                      </div>
+                    {/* Card Action Footer */}
+                    <div className="px-4 sm:px-5 pb-4 pt-1 border-t border-border/40 mt-1 flex items-center justify-between gap-2 text-xs">
+                      {isScheduled && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCancellingApt(apt)}
+                            className="h-8 px-2.5 text-xs text-muted-foreground hover:text-destructive cursor-pointer"
+                          >
+                            <CalendarX className="size-3 mr-1" />
+                            <span>Cancel Visit</span>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isConfirmingThis}
+                            onClick={() => handleConfirmCheckIn(apt)}
+                            className="h-8 px-3 text-xs font-medium cursor-pointer border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"
+                          >
+                            {isConfirmingThis ? (
+                              <span className="flex items-center gap-1.5">
+                                <div className="size-3 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                                <span>Confirming...</span>
+                              </span>
+                            ) : (
+                              <span>Confirm Arrival Check-In</span>
+                            )}
+                          </Button>
+                        </>
+                      )}
 
-                      <div className="flex items-center gap-1.5 text-foreground font-mono pt-1 border-t border-border/60">
-                        <Clock className="size-3.5 text-muted-foreground shrink-0" />
-                        <span>
-                          {new Date(apt.scheduledAt).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                            hour: 'numeric',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
+                      {isConfirmed && (
+                        <>
+                          <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium text-xs">
+                            <CheckCircle2 className="size-3.5" />
+                            <span>Arrival Confirmed — Awaiting Room Call</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCancellingApt(apt)}
+                            className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive cursor-pointer"
+                          >
+                            <span>Cancel</span>
+                          </Button>
+                        </>
+                      )}
+
+                      {isCancelled && (
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-xs italic">
+                          <span>Visit cancelled by patient</span>
+                        </div>
+                      )}
+
+                      {(isCompleted || isInProgress) && (
+                        <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-mono">
+                          <span>Status: {apt.status}</span>
+                        </div>
+                      )}
                     </div>
-
-                    {isUpcoming && (
-                      <div className="flex items-center justify-between pt-1">
-                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                          Pre-check-in available
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            triggerToast(
-                              `Pre-check-in confirmed for ${apt.physicianName} (${apt.roomNumber || 'Exam Suite 3B'}).`,
-                            )
-                          }
-                          className="h-8 px-3 text-xs font-medium cursor-pointer border-border"
-                        >
-                          Confirm Check-In
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -687,6 +850,26 @@ function PatientPortalContent() {
           dischargeSummary={dischargeSummary}
         />
       )}
+
+      {/* Book Outpatient Appointment Modal */}
+      {data && (
+        <BookAppointmentModal
+          isOpen={isBookModalOpen}
+          onClose={() => setIsBookModalOpen(false)}
+          patientId={data.patient.id}
+          patientName={data.patient.fullName}
+          patientMrn={data.patient.mrn}
+          onAppointmentBooked={handleAppointmentBooked}
+        />
+      )}
+
+      {/* Cancel Appointment Modal */}
+      <CancelAppointmentModal
+        appointment={cancellingApt}
+        isOpen={!!cancellingApt}
+        onClose={() => setCancellingApt(null)}
+        onAppointmentCancelled={handleAppointmentCancelled}
+      />
     </div>
   );
 }

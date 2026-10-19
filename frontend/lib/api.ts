@@ -794,23 +794,42 @@ export async function createAppointment(input: CreateAppointmentInput): Promise<
   }
 
   const currentApts = getStoredAppointments();
-  const patient = localPatients.find((p) => p.id === input.patientId) || localPatients[0];
+  const patient = localPatients.find((p) => p.id === input.patientId || p.mrn === input.patientId) || localPatients[0];
+  const doctor = PHYSICIAN_PRESETS.find((d) => d.id === input.physicianId || d.name === input.physicianId);
   const newApt: Appointment = {
     id: `apt-${Date.now()}`,
-    patientId: input.patientId,
+    patientId: patient?.id || input.patientId,
     patientName: patient?.fullName || 'Walk-in Patient',
     mrn: patient?.mrn || 'MRN-NEW',
-    physicianId: input.physicianId,
-    physicianName: 'Dr. Sarah Chen',
+    physicianId: doctor?.id || input.physicianId,
+    physicianName: doctor?.name || 'Dr. Sarah Chen, MD',
     scheduledAt: input.scheduledAt,
     durationMinutes: input.durationMinutes || 30,
     status: 'SCHEDULED',
     reason: input.reason,
-    roomNumber: input.roomNumber || 'Consultation Suite 2B',
+    roomNumber: input.roomNumber || doctor?.defaultRoom || 'Exam Suite 3B',
     notes: input.notes,
   };
   const updatedList = [newApt, ...currentApts];
   saveStoredAppointments(updatedList);
+
+  recordAuditLogEntry({
+    action: 'APPOINTMENT_SCHEDULED',
+    resource: 'appointments',
+    resourceId: newApt.id,
+    userId: patient?.id || 'p-1',
+    userEmail: patient ? `${patient.firstName.toLowerCase()}.${patient.lastName.toLowerCase()}@patient.caresync.org` : 'patient@caresync.org',
+    userRole: 'PATIENT',
+    ipAddress: '192.168.1.105',
+    metadata: {
+      patientName: newApt.patientName,
+      physicianName: newApt.physicianName,
+      scheduledAt: newApt.scheduledAt,
+      reason: newApt.reason,
+      roomNumber: newApt.roomNumber,
+    },
+  });
+
   return { success: true, data: newApt };
 }
 
@@ -855,6 +874,63 @@ export async function updateAppointmentStatus(
   saveStoredAppointments(updatedList);
   const found = updatedList.find((a) => a.id === id);
   return { success: true, data: found };
+}
+
+export async function cancelAppointment(
+  id: string,
+  reason = 'Patient requested cancellation',
+  cancelledBy = 'PATIENT',
+): Promise<{ success: boolean; data?: Appointment; error?: string }> {
+  const currentApts = getStoredAppointments();
+  const target = currentApts.find((a) => a.id === id);
+  if (!target) {
+    return { success: false, error: 'Appointment not found.' };
+  }
+
+  const updatedApt: Appointment = {
+    ...target,
+    status: 'CANCELLED',
+    notes: target.notes ? `${target.notes} | Cancellation Reason: ${reason}` : `Cancellation Reason: ${reason}`,
+  };
+
+  const updatedList = currentApts.map((a) => (a.id === id ? updatedApt : a));
+  saveStoredAppointments(updatedList);
+
+  // Attempt backend update if backend UUID
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  if (isUuid) {
+    try {
+      const token = await getValidAuthToken();
+      await fetch(`${API_BASE_URL}/appointments/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ status: 'CANCELLED' }),
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  recordAuditLogEntry({
+    action: 'APPOINTMENT_CANCELLED_BY_PATIENT',
+    resource: 'appointments',
+    resourceId: id,
+    userId: target.patientId || 'p-1',
+    userEmail: 'eleanor.vance@patient.caresync.org',
+    userRole: cancelledBy as any,
+    ipAddress: '192.168.1.105',
+    metadata: {
+      patientName: target.patientName,
+      physicianName: target.physicianName,
+      scheduledAt: target.scheduledAt,
+      cancellationReason: reason,
+    },
+  });
+
+  return { success: true, data: updatedApt };
 }
 
 export function resetAppointmentsToDefault(): Appointment[] {
