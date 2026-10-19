@@ -246,7 +246,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-xs py-1 px-2.5 gap-1.5"
+            className="border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
           >
             <span className="size-1.5 rounded-full bg-red-500 animate-ping shrink-0" />
             <span>STAT</span>
@@ -256,7 +256,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold text-xs py-1 px-2.5 gap-1.5"
+            className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
           >
             <Clock className="size-3 text-amber-600 dark:text-amber-400" />
             <span>Urgent</span>
@@ -266,7 +266,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-border bg-muted/40 text-muted-foreground font-medium text-xs py-1 px-2.5"
+            className="border-border bg-muted/40 text-muted-foreground font-medium text-xs py-1 px-2.5 whitespace-nowrap shrink-0"
           >
             Routine
           </Badge>
@@ -294,7 +294,7 @@ export default function LabsPage() {
 
     if (tubeName.includes('Lavender')) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/30 whitespace-nowrap shrink-0">
           <span className="size-2 rounded-full bg-purple-600 shrink-0" />
           <span>Lavender EDTA</span>
         </span>
@@ -302,7 +302,7 @@ export default function LabsPage() {
     }
     if (tubeName.includes('Gold')) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 whitespace-nowrap shrink-0">
           <span className="size-2 rounded-full bg-amber-500 shrink-0" />
           <span>Gold SST</span>
         </span>
@@ -310,7 +310,7 @@ export default function LabsPage() {
     }
     if (tubeName.includes('Light Blue')) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/30">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/30 whitespace-nowrap shrink-0">
           <span className="size-2 rounded-full bg-sky-500 shrink-0" />
           <span>Citrate Blue</span>
         </span>
@@ -318,14 +318,14 @@ export default function LabsPage() {
     }
     if (tubeName.includes('Green')) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 whitespace-nowrap shrink-0">
           <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
           <span>Heparin Green</span>
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-muted text-foreground border border-border">
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-muted text-foreground border border-border whitespace-nowrap shrink-0">
         <span className="size-2 rounded-full bg-muted-foreground shrink-0" />
         <span>Sterile Cup</span>
       </span>
@@ -339,7 +339,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold text-xs py-1 px-2.5 gap-1.5"
+            className="border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
           >
             <Check className="size-3" />
             <span>Reviewed</span>
@@ -349,7 +349,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium text-xs py-1 px-2.5 gap-1.5"
+            className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
           >
             <CheckCircle2 className="size-3" />
             <span>Verified</span>
@@ -359,7 +359,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium text-xs py-1 px-2.5"
+            className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium text-xs py-1 px-2.5 whitespace-nowrap shrink-0"
           >
             Resulted
           </Badge>
@@ -369,7 +369,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 font-medium text-xs py-1 px-2.5 gap-1.5"
+            className="border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 font-medium text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
           >
             <Activity className="size-3 animate-spin text-sky-600 dark:text-sky-400" />
             <span>In Lab Run</span>
@@ -379,7 +379,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium text-xs py-1 px-2.5"
+            className="border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium text-xs py-1 px-2.5 whitespace-nowrap shrink-0"
           >
             Specimen In Lab
           </Badge>
@@ -388,7 +388,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-destructive/30 bg-destructive/10 text-destructive font-medium text-xs py-1 px-2.5 gap-1.5"
+            className="border-destructive/30 bg-destructive/10 text-destructive font-medium text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
           >
             <AlertCircle className="size-3 text-destructive" />
             <span>Specimen Rejected</span>
@@ -400,7 +400,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium text-[11px] py-0.5 px-2"
+            className="border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium text-[11px] py-0.5 px-2 whitespace-nowrap shrink-0"
           >
             Requisitioned
           </Badge>
@@ -632,14 +632,14 @@ export default function LabsPage() {
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow className="border-b border-border bg-muted/30">
-                <TableHead className="w-[140px] pl-6 font-medium text-sm text-muted-foreground py-3.5">Order #</TableHead>
-                <TableHead className="w-[240px] font-medium text-sm text-muted-foreground py-3.5">Patient & MRN</TableHead>
-                <TableHead className="min-w-[220px] font-medium text-sm text-muted-foreground py-3.5">Diagnostic Panel</TableHead>
-                <TableHead className="w-[120px] font-medium text-sm text-muted-foreground py-3.5">Priority</TableHead>
-                <TableHead className="w-[140px] font-medium text-sm text-muted-foreground py-3.5">Status</TableHead>
-                <TableHead className="w-[200px] font-medium text-sm text-muted-foreground py-3.5">Requisitioned By</TableHead>
-                <TableHead className="text-right pr-6 w-[170px] font-medium text-sm text-muted-foreground py-3.5">Actions</TableHead>
+              <TableRow className="border-b border-border bg-muted/40">
+                <TableHead className="w-[150px] pl-6 font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Order #</TableHead>
+                <TableHead className="w-[230px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Patient & MRN</TableHead>
+                <TableHead className="min-w-[240px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5">Diagnostic Panel</TableHead>
+                <TableHead className="w-[110px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Priority</TableHead>
+                <TableHead className="w-[160px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Status</TableHead>
+                <TableHead className="w-[200px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Requisitioned By</TableHead>
+                <TableHead className="text-right pr-6 min-w-[260px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -671,7 +671,7 @@ export default function LabsPage() {
                   const isAwaitingResults = order.status === 'COLLECTED' || order.status === 'PROCESSING' || order.status === 'IN_ANALYSIS';
                   const isResulted = order.status === 'RESULTED';
                   const isCompleted = order.status === 'VERIFIED' || order.status === 'REVIEWED' || order.status === 'COMPLETED';
-                  const hasPanicValue = order.results?.some((r) => r.isPanic || r.flag === 'CRITICAL');
+                  const hasPanicValue = order.results?.some((r) => r.isPanicValue || (r as any).isPanic || (r as any).flag === 'CRITICAL');
 
                   return (
                     <TableRow
@@ -681,19 +681,19 @@ export default function LabsPage() {
                       title="Click to view diagnostic order details"
                     >
                       {/* Column 1: Order # */}
-                      <TableCell className="pl-6 py-4">
-                        <div className="font-mono font-medium text-xs text-muted-foreground bg-muted/60 px-2 py-1 rounded border border-border inline-block">
+                      <TableCell className="pl-6 py-4 align-middle whitespace-nowrap">
+                        <div className="font-mono font-medium text-xs text-foreground bg-muted/80 px-2.5 py-1 rounded border border-border inline-block whitespace-nowrap shadow-2xs">
                           {order.orderNumber}
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">
+                        <div className="text-xs text-muted-foreground mt-1 whitespace-nowrap">
                           {new Date(order.requestedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
                         </div>
                       </TableCell>
 
                       {/* Column 2: Patient Identity */}
-                      <TableCell className="py-4">
-                        <div className="flex items-center gap-3.5">
-                          <Avatar className="h-10 w-10 border border-border text-xs shrink-0">
+                      <TableCell className="py-4 align-middle">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9 border border-border text-xs shrink-0">
                             <AvatarFallback className="text-xs font-semibold text-muted-foreground bg-muted">
                               {initials}
                             </AvatarFallback>
@@ -702,7 +702,7 @@ export default function LabsPage() {
                             <div className="font-semibold text-sm text-foreground leading-snug truncate">
                               {order.patientName}
                             </div>
-                            <div className="font-mono text-xs text-muted-foreground mt-0.5">
+                            <div className="font-mono text-xs text-muted-foreground mt-0.5 whitespace-nowrap">
                               {order.mrn}
                             </div>
                           </div>
@@ -710,41 +710,41 @@ export default function LabsPage() {
                       </TableCell>
 
                       {/* Column 3: Diagnostic Panel & Specimen Container Tube */}
-                      <TableCell className="py-4">
-                        <div className="font-medium text-sm text-foreground leading-snug">
+                      <TableCell className="py-4 align-middle">
+                        <div className="font-semibold text-sm text-foreground leading-snug">
                           {order.testName}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
                           {order.testCategory}
                         </div>
-                        <div className="mt-1.5">
+                        <div className="pt-1.5 flex items-center">
                           {renderSpecimenTubeBadge(order.specimenTube, order.testCategory, order.testName)}
                         </div>
                       </TableCell>
 
                       {/* Column 4: Priority */}
-                      <TableCell className="py-4">{renderPriorityBadge(order.priority)}</TableCell>
+                      <TableCell className="py-4 align-middle whitespace-nowrap">{renderPriorityBadge(order.priority)}</TableCell>
 
                       {/* Column 5: Status */}
-                      <TableCell className="py-4">{renderStatusBadge(order.status)}</TableCell>
+                      <TableCell className="py-4 align-middle whitespace-nowrap">{renderStatusBadge(order.status)}</TableCell>
 
                       {/* Column 6: Requisitioned By */}
-                      <TableCell className="py-4">
-                        <div className="flex items-center gap-2 text-sm font-medium text-foreground whitespace-nowrap">
+                      <TableCell className="py-4 align-middle whitespace-nowrap">
+                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                           <Stethoscope className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                           <span>{order.requestedBy}</span>
                         </div>
                       </TableCell>
 
                       {/* Column 7: Actions */}
-                      <TableCell className="pr-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <TableCell className="pr-6 py-4 align-middle text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2 shrink-0 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                           {/* Panic Alert Call Badge or Button */}
                           {hasPanicValue && (
                             order.panicCallLog ? (
                               <Badge
                                 variant="outline"
-                                className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold text-xs py-1 px-2 gap-1"
+                                className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0 shadow-2xs"
                                 title={`Verbal read-back logged by ${order.panicCallLog.callerName} to ${order.panicCallLog.calledTo}`}
                               >
                                 <PhoneCall className="size-3 text-emerald-600 dark:text-emerald-400" />
@@ -754,7 +754,7 @@ export default function LabsPage() {
                               <Button
                                 size="sm"
                                 onClick={() => setOrderForPanicCall(order)}
-                                className="text-xs h-8 px-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold shadow-xs animate-pulse cursor-pointer gap-1.5"
+                                className="text-xs h-8 px-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold shadow-xs animate-pulse cursor-pointer gap-1.5 whitespace-nowrap shrink-0"
                                 title="CLIA Critical Value: Attending Physician Read-Back Call Mandatory"
                               >
                                 <PhoneCall className="size-3.5" />
@@ -764,12 +764,12 @@ export default function LabsPage() {
                           )}
 
                           {order.status === 'REJECTED' ? (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 shrink-0">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setSelectedOrderForFindings(order)}
-                                className="text-xs text-destructive hover:bg-destructive/10 h-8 px-2.5 cursor-pointer font-medium border-destructive/30"
+                                className="text-xs text-destructive hover:bg-destructive/10 h-8 px-2.5 cursor-pointer font-medium border-destructive/30 whitespace-nowrap"
                                 title={order.rejectionReason}
                               >
                                 <AlertCircle className="size-3.5 mr-1" />
@@ -788,7 +788,7 @@ export default function LabsPage() {
                                       showToast('error', res.error || 'Failed to trigger recollection.');
                                     }
                                   }}
-                                  className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 border-amber-500/30 h-8 px-2.5 cursor-pointer font-medium"
+                                  className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 border-amber-500/30 h-8 px-2.5 cursor-pointer font-medium whitespace-nowrap"
                                   title="Order replacement tube specimen recollection"
                                 >
                                   <RotateCcw className="size-3.5 mr-1" />
@@ -796,59 +796,61 @@ export default function LabsPage() {
                                 </Button>
                               )}
                               {order.recollectionRequisitionId && (
-                                <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground border-border">
+                                <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground border-border whitespace-nowrap">
                                   Recollection Reordered
                                 </Badge>
                               )}
                             </div>
                           ) : isPendingCollection ? (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 shrink-0">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleMarkCollected(order)}
-                                className="text-xs h-8 px-3 border-border hover:bg-muted font-medium cursor-pointer"
+                                className="text-xs h-8 px-3 border-border hover:bg-muted font-medium cursor-pointer whitespace-nowrap"
                               >
                                 <FlaskConical className="size-3.5 mr-1.5 text-purple-500" />
                                 <span>Collect Specimen</span>
                               </Button>
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={() => setOrderToReject(order)}
-                                className="text-xs h-8 px-2 text-destructive hover:bg-destructive/10 font-medium cursor-pointer"
+                                className="text-xs h-8 px-2.5 text-destructive hover:bg-destructive/10 border-destructive/25 font-medium cursor-pointer gap-1 whitespace-nowrap"
                                 title="Reject Specimen (CLIA Exception)"
                               >
                                 <XCircle className="size-3.5" />
+                                <span>Reject</span>
                               </Button>
                             </div>
                           ) : isAwaitingResults ? (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 shrink-0">
                               <Button
                                 size="sm"
                                 onClick={() => setSelectedOrderForEntry(order)}
-                                className="text-xs h-8 px-3 gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+                                className="text-xs h-8 px-3 gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-medium whitespace-nowrap shadow-2xs"
                               >
                                 <Plus className="size-3.5" />
                                 <span>Input Findings</span>
                               </Button>
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={() => setOrderToReject(order)}
-                                className="text-xs h-8 px-2 text-destructive hover:bg-destructive/10 font-medium cursor-pointer"
+                                className="text-xs h-8 px-2.5 text-destructive hover:bg-destructive/10 border-destructive/25 font-medium cursor-pointer gap-1 whitespace-nowrap"
                                 title="Reject Specimen (CLIA Exception)"
                               >
                                 <XCircle className="size-3.5" />
+                                <span>Reject</span>
                               </Button>
                             </div>
                           ) : (
-                            <>
+                            <div className="flex items-center gap-1.5 shrink-0">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => setSelectedOrderForFindings(order)}
-                                className="text-xs text-foreground hover:bg-muted h-8 px-3 cursor-pointer font-medium border-border"
+                                className="text-xs text-foreground hover:bg-muted h-8 px-3 cursor-pointer font-medium border-border whitespace-nowrap"
                               >
                                 <Eye className="size-3.5 mr-1.5 text-muted-foreground" />
                                 <span>{isResulted ? 'Verify & Sign' : 'View Findings'}</span>
@@ -858,13 +860,13 @@ export default function LabsPage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => setOrderToExport(order)}
-                                  className="h-8 px-2 text-xs border-border hover:bg-muted font-medium cursor-pointer"
+                                  className="h-8 px-2 text-xs border-border hover:bg-muted font-medium cursor-pointer shrink-0"
                                   title="Export Certified Official PDF Laboratory Report"
                                 >
                                   <Printer className="size-3.5 text-muted-foreground" />
                                 </Button>
                               )}
-                            </>
+                            </div>
                           )}
                         </div>
                       </TableCell>
@@ -959,7 +961,7 @@ export default function LabsPage() {
         isOpen={!!orderForPanicCall}
         onClose={() => setOrderForPanicCall(null)}
         order={orderForPanicCall}
-        onCallLogged={(updated: LabOrder) => {
+        onCallLogged={(updated) => {
           setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
           showToast('success', `Verbal panic value call logged to ${updated.panicCallLog?.calledTo}. Read-back confirmed.`);
         }}

@@ -95,7 +95,7 @@ export function PhysicianInbasket({
 
   const panicOrders = labOrders.filter(
     (o) =>
-      o.results?.some((r) => r.isPanicValue || r.isPanic || r.flag === 'CRITICAL') &&
+      o.results?.some((r) => r.isPanicValue || (r as any).isPanic || (r as any).flag === 'CRITICAL') &&
       o.status !== 'REVIEWED' &&
       o.status !== 'COMPLETED',
   );
@@ -396,7 +396,7 @@ export function PhysicianInbasket({
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                     {panicOrders.map((order) => {
-                      const panicResults = order.results?.filter((r) => r.isPanicValue || r.isPanic || r.flag === 'CRITICAL') || [];
+                      const panicResults = order.results?.filter((r) => r.isPanicValue || (r as any).isPanic || (r as any).flag === 'CRITICAL') || [];
 
                       return (
                         <div
@@ -444,7 +444,7 @@ export function PhysicianInbasket({
                           <div className="space-y-1.5 bg-background/80 p-2.5 rounded border border-border/60">
                             {panicResults.map((item, idx) => (
                               <div key={idx} className="flex items-center justify-between text-xs">
-                                <span className="font-medium text-foreground">{item.parameter || item.testName || 'Biomarker'}:</span>
+                                <span className="font-medium text-foreground">{item.parameter || (item as any).testName || 'Biomarker'}:</span>
                                 <div className="flex items-center gap-2">
                                   <span className="font-mono font-bold text-red-600 dark:text-red-400">
                                     {item.value} {item.unit}

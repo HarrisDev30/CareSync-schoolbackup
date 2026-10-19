@@ -106,3 +106,4 @@ Sprint 8 eliminates all "empty" or one-sided role experiences across the CareSyn
 | `PRESCRIPTION_REFILL_APPROVED` | `/patients` inbasket — Physician refill authorization | `PHYSICIAN` | `prescriptions` |
 | `PRESCRIPTION_REFILL_DENIED` | `/patients` inbasket — Physician refill denial | `PHYSICIAN` | `prescriptions` |
 | `ROOM_TURNOVER_COMPLETED` | `/rooms` — Suite certified clean & ready | `TRIAGE_NURSE` / Staff | `hospital_rooms` |
+

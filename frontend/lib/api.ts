@@ -1153,7 +1153,15 @@ export function getStoredLabOrders(): LabOrder[] {
     if (saved) {
       const parsed = JSON.parse(saved);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.map((item: LabOrder) => {
+          const preset = INITIAL_LABS.find((init) => init.id === item.id || init.orderNumber === item.orderNumber);
+          return {
+            ...item,
+            specimenTube: item.specimenTube || preset?.specimenTube,
+            panicCallLog: item.panicCallLog || preset?.panicCallLog,
+            recollectionRequired: item.recollectionRequired ?? preset?.recollectionRequired,
+          };
+        });
       }
     }
   } catch {
