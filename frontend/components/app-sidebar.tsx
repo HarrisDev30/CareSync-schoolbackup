@@ -203,49 +203,24 @@ export function AppSidebar({
   const patientNav = [
     {
       title: "My Health Record",
-      url: "/patient-portal",
+      url: "/patient-portal?tab=overview",
       icon: Activity,
       isActive: true,
-      items: [
-        {
-          title: "Vitals & Health Overview",
-          url: "/patient-portal",
-        },
-      ],
     },
     {
       title: "My Appointments",
-      url: "/patient-portal",
+      url: "/patient-portal?tab=appointments",
       icon: Calendar,
-      isActive: true,
-      items: [
-        {
-          title: "Scheduled Doctor Visits",
-          url: "/patient-portal?tab=appointments",
-        },
-      ],
     },
     {
       title: "Diagnostic Results",
-      url: "/patient-portal",
+      url: "/patient-portal?tab=labs",
       icon: Beaker,
-      items: [
-        {
-          title: "Verified Lab Tests",
-          url: "/patient-portal?tab=labs",
-        },
-      ],
     },
     {
       title: "Prescriptions & Care",
-      url: "/patient-portal",
+      url: "/patient-portal?tab=medications",
       icon: FileSpreadsheet,
-      items: [
-        {
-          title: "Active Medications",
-          url: "/patient-portal?tab=medications",
-        },
-      ],
     },
   ];
 

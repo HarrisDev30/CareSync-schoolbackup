@@ -74,25 +74,25 @@ export function MedicalRecordExportModal({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl max-h-[92vh] flex flex-col p-0 bg-card text-card-foreground border-border overflow-hidden shadow-2xl">
         {/* Top Screen Toolbar (Hidden during Print) */}
-        <div className="print:hidden p-4 border-b border-border bg-muted/40 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <FileText className="size-5 text-primary" />
-            <div>
-              <DialogTitle className="text-sm font-bold text-foreground">
+        <div className="print:hidden p-4 pr-12 border-b border-border bg-muted/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+          <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+            <FileText className="size-5 text-primary shrink-0 mt-0.5 sm:mt-0" />
+            <div className="min-w-0">
+              <DialogTitle className="text-sm font-bold text-foreground leading-snug">
                 Certified Official Electronic Health Record (EHR) Export
               </DialogTitle>
-              <p className="text-xs text-muted-foreground">
-                Document Control ID: <span className="font-mono font-medium text-foreground">{recordControlNumber}</span> • HIPAA Compliant PHI Summary
+              <p className="text-xs text-muted-foreground truncate">
+                Doc ID: <span className="font-mono font-medium text-foreground">{recordControlNumber}</span> • HIPAA PHI Summary
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 mr-8">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={handlePrint}
-              className="h-8 text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 border-transparent shadow-xs"
+              className="h-8 text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 border-transparent shadow-xs w-full sm:w-auto justify-center"
             >
               <Printer className="size-3.5" />
               <span>Print Record / Save PDF</span>
@@ -101,7 +101,7 @@ export function MedicalRecordExportModal({
         </div>
 
         {/* Printable EHR Document Container */}
-        <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-card print:p-0 print:overflow-visible">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 bg-card print:p-0 print:overflow-visible">
           <div className="max-w-3xl mx-auto space-y-6 text-foreground print:text-black print:text-sm">
             {/* 1. OFFICIAL HOSPITAL LETTERHEAD */}
             <div className="border-b-2 border-foreground/20 pb-5 flex flex-col sm:flex-row sm:items-start justify-between gap-4">

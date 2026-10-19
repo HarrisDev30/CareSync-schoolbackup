@@ -213,20 +213,24 @@ export default function DashboardLayout({
 
       {/* Official shadcn sidebar-08 Inset Canvas */}
       <SidebarInset>
-        <header className="flex h-16 shrink-0 items-center justify-between gap-2 px-6 border-b border-border bg-card/80 backdrop-blur-md transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 sticky top-0 z-20">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground" />
-            <Separator orientation="vertical" className="mr-2 h-4" />
-            <Breadcrumb>
-              <BreadcrumbList>
+        <header
+          className={`flex h-16 shrink-0 items-center justify-between gap-2 ${
+            pathname === '/patient-portal' ? 'px-3.5 sm:px-6' : 'px-6'
+          } border-b border-border bg-card/80 backdrop-blur-md transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12 sticky top-0 z-20`}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <SidebarTrigger className="-ml-1 text-muted-foreground hover:text-foreground shrink-0" />
+            <Separator orientation="vertical" className="mr-2 h-4 shrink-0" />
+            <Breadcrumb className="min-w-0">
+              <BreadcrumbList className="flex-nowrap">
                 <BreadcrumbItem className="hidden md:block">
                   <BreadcrumbLink href={roleHeader.href} className="text-sm text-muted-foreground hover:text-foreground">
                     {roleHeader.title}
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
-                <BreadcrumbItem>
-                  <BreadcrumbPage className="text-sm font-semibold text-foreground">
+                <BreadcrumbItem className="min-w-0">
+                  <BreadcrumbPage className="text-sm font-semibold text-foreground truncate">
                     {getPageTitle()}
                   </BreadcrumbPage>
                 </BreadcrumbItem>
@@ -234,7 +238,7 @@ export default function DashboardLayout({
             </Breadcrumb>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             {/* Dark / Light Mode Toggle */}
             <Button
               variant="outline"
@@ -255,13 +259,19 @@ export default function DashboardLayout({
               className="gap-1.5 text-xs text-muted-foreground hover:text-foreground h-8 px-2.5 hover:bg-muted"
             >
               <Lock className="size-3.5 text-muted-foreground" />
-              <span className="hidden sm:inline">Lock Desk</span>
+              <span className="hidden sm:inline">
+                {currentStaff.role === 'PATIENT' ? 'Lock Session' : 'Lock Desk'}
+              </span>
             </Button>
           </div>
         </header>
 
         {/* Page Canvas (Matches sidebar-08 content wrapper) */}
-        <div className="flex flex-1 flex-col gap-6 p-6">
+        <div
+          className={`flex flex-1 flex-col gap-6 ${
+            pathname === '/patient-portal' ? 'p-3.5 sm:p-6' : 'p-6'
+          }`}
+        >
           {children}
         </div>
       </SidebarInset>
