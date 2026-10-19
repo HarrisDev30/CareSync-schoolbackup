@@ -364,3 +364,14 @@ export interface CreateStaffAccountInput {
   licenseNumber?: string;
 }
 
+export interface UpdateStaffAccountInput {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  role?: StaffRole;
+  department?: string;
+  licenseNumber?: string;
+}
+
+

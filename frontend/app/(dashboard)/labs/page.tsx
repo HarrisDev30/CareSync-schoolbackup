@@ -23,6 +23,7 @@ import {
   Flame,
   Check,
   Loader2,
+  Printer,
 } from 'lucide-react';
 import { LabOrder, DiagnosticPriority, DiagnosticStatus, Patient, CreateDiagnosticOrderInput, LabResultItem } from '@/types';
 import {
@@ -35,6 +36,7 @@ import {
   reviewDiagnosticResult,
 } from '@/lib/api';
 import { CommandMenu } from '@/components/command-menu';
+import { DiagnosticReportExportModal } from '@/components/diagnostic-report-export-modal';
 import {
   Card,
   CardHeader,
@@ -80,6 +82,7 @@ export default function LabsPage() {
   // Active modals
   const [selectedOrderForFindings, setSelectedOrderForFindings] = useState<LabOrder | null>(null);
   const [selectedOrderForEntry, setSelectedOrderForEntry] = useState<LabOrder | null>(null);
+  const [orderToExport, setOrderToExport] = useState<LabOrder | null>(null);
   const [isRequisitionOpen, setIsRequisitionOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -679,15 +682,28 @@ export default function LabsPage() {
                               <span>Input Findings</span>
                             </Button>
                           ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedOrderForFindings(order)}
-                              className="text-xs text-foreground hover:bg-muted h-8 px-3 cursor-pointer font-medium border-border"
-                            >
-                              <Eye className="size-3.5 mr-1.5 text-muted-foreground" />
-                              <span>{isResulted ? 'Verify & Sign' : 'View Findings'}</span>
-                            </Button>
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedOrderForFindings(order)}
+                                className="text-xs text-foreground hover:bg-muted h-8 px-3 cursor-pointer font-medium border-border"
+                              >
+                                <Eye className="size-3.5 mr-1.5 text-muted-foreground" />
+                                <span>{isResulted ? 'Verify & Sign' : 'View Findings'}</span>
+                              </Button>
+                              {order.results && order.results.length > 0 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setOrderToExport(order)}
+                                  className="h-8 px-2 text-xs border-border hover:bg-muted font-medium cursor-pointer"
+                                  title="Export Certified Official PDF Laboratory Report"
+                                >
+                                  <Printer className="size-3.5 text-muted-foreground" />
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -757,6 +773,13 @@ export default function LabsPage() {
         onClose={() => setSelectedOrderForFindings(null)}
         onVerify={handleVerifyFindings}
         onReview={handleReviewFindings}
+      />
+
+      {/* Official Certified PDF Report Modal [FE-704] */}
+      <DiagnosticReportExportModal
+        isOpen={!!orderToExport}
+        onClose={() => setOrderToExport(null)}
+        order={orderToExport}
       />
 
       {/* Shared Command Palette (⌘K) */}

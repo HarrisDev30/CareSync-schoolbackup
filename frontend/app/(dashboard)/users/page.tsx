@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   RefreshCw,
   AlertTriangle,
+  Pencil,
 } from 'lucide-react';
 import {
   StaffAccount,
@@ -64,6 +65,7 @@ import {
 } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CommandMenu } from '@/components/command-menu';
+import { EditStaffModal } from './_components/edit-staff-modal';
 
 const REVOCATION_PRESETS = [
   'Staff Member Leaves — Account Disabled & Access Revoked',
@@ -121,6 +123,10 @@ export default function UsersGovernancePage() {
   const [revokeTarget, setRevokeTarget] = useState<StaffAccount | null>(null);
   const [revokeReason, setRevokeReason] = useState(REVOCATION_PRESETS[0]);
 
+  // Edit Staff Profile Modal State [FE-703]
+  const [editingStaff, setEditingStaff] = useState<StaffAccount | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
   const loadStaff = async () => {
     setIsLoading(true);
     try {
@@ -140,6 +146,11 @@ export default function UsersGovernancePage() {
   const showToast = (type: 'success' | 'info' | 'warning', text: string) => {
     setToastMessage({ type, text });
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleStaffUpdated = (updated: StaffAccount) => {
+    setStaffList((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    showToast('success', `Staff profile for ${updated.fullName} successfully updated.`);
   };
 
   const handleSwitchToAdmin = async () => {
@@ -684,34 +695,50 @@ export default function UsersGovernancePage() {
                       </TableCell>
 
                       <TableCell className="text-right pr-5">
-                        {isRootAdmin ? (
-                          <span className="text-[11px] font-mono text-muted-foreground">
-                            Protected Root Admin
-                          </span>
-                        ) : staff.isActive ? (
+                        <div className="flex items-center justify-end gap-1.5">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => {
-                              setRevokeReason(REVOCATION_PRESETS[0]);
-                              setRevokeTarget(staff);
+                              setEditingStaff(staff);
+                              setIsEditOpen(true);
                             }}
-                            className="h-7 px-2.5 text-xs gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 cursor-pointer"
+                            className="h-7 px-2.5 text-xs gap-1 border-border bg-background hover:bg-muted text-foreground cursor-pointer shadow-2xs"
+                            title="Edit Staff Profile, Department & Credentials"
                           >
-                            <UserX className="size-3.5" />
-                            <span>Revoke Access</span>
+                            <Pencil className="size-3 text-muted-foreground" />
+                            <span>Edit</span>
                           </Button>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleRestoreAccess(staff)}
-                            className="h-7 px-2.5 text-xs gap-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer"
-                          >
-                            <UserCheck className="size-3.5" />
-                            <span>Restore Access</span>
-                          </Button>
-                        )}
+
+                          {isRootAdmin ? (
+                            <span className="text-[11px] font-mono text-muted-foreground ml-1">
+                              Protected Root Admin
+                            </span>
+                          ) : staff.isActive ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setRevokeReason(REVOCATION_PRESETS[0]);
+                                setRevokeTarget(staff);
+                              }}
+                              className="h-7 px-2.5 text-xs gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 cursor-pointer shadow-2xs"
+                            >
+                              <UserX className="size-3.5" />
+                              <span>Revoke Access</span>
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRestoreAccess(staff)}
+                              className="h-7 px-2.5 text-xs gap-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/10 cursor-pointer shadow-2xs"
+                            >
+                              <UserCheck className="size-3.5" />
+                              <span>Restore Access</span>
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -937,6 +964,14 @@ export default function UsersGovernancePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Staff Profile & Credentials Modal [FE-703] */}
+      <EditStaffModal
+        staff={editingStaff}
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        onStaffUpdated={handleStaffUpdated}
+      />
 
       <CommandMenu open={isCommandOpen} onOpenChange={setIsCommandOpen} />
     </div>

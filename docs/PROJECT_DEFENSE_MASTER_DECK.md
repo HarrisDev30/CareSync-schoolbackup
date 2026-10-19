@@ -12,7 +12,7 @@
 | :--- | :--- | :--- | :---: |
 | **Harris Asani** | Lead Backend & Cryptographic Engineer | NestJS Micro-architecture, AES-256-GCM Envelope Encryption, Argon2id Auth, RBAC Matrix & Analytics Engine | **90 sec** |
 | **Edson Sode** | Senior Frontend & Clinical UI/UX Specialist | Anti-Glare UX (`#eaedf2`), 5-Tab Doctor Workstation, Department Wing Room Management & Executive Analytics Dashboard | **90 sec** |
-| **Christian Jay Harris** | QA, Security Testing & Medical Validation Lead | 56/56 Passing Tests (9 Suites), HTTP 403 Role Boundary Guards, Physiological DTO Safety & End-to-End Hospital Lifecycle | **75 sec** |
+| **Christian Jay Harris** | QA, Security Testing & Medical Validation Lead | 60/60 Passing Tests (10 Suites), HTTP 403 Role Boundary Guards, Physiological DTO Safety & End-to-End Hospital Lifecycle | **75 sec** |
 | **John Loyd Balbuena** | DevOps, Database Systems & Infrastructure Lead | Docker Orchestration, Neon Cloud Connection Pooling, Automated 7-Day Backup Rotation (`backup-db.ps1`), 1-Command Demo Reset & CI/CD | **75 sec** |
 
 ---
@@ -36,7 +36,7 @@ timeline
     0:45 - 1:45 : Harris Asani : Backend Architecture & Cryptographic Engine
     1:45 - 2:30 : Edson Sode : Frontend Clinical UX & Department Room Management
     2:30 - 3:15 : Edson Sode : Executive Analytics & Diagnostic TAT Visualizer
-    3:15 - 4:10 : Christian Jay Harris : QA, Role Boundary Tests (56/56) & Medical Safety
+    3:15 - 4:10 : Christian Jay Harris : QA, Role Boundary Tests (60/60) & Medical Safety
     4:10 - 5:00 : John Loyd Balbuena : DevOps, Neon Pooling, Backups & Disaster Recovery
 ```
 
@@ -90,10 +90,10 @@ timeline
 
 ### Slide 5: Quality Assurance, Security Boundaries & Medical Safety
 * **Presenter**: `Christian Jay Harris` (3:15 – 4:10)
-* **Visuals**: Jest Terminal Output showing **56/56 Passing Tests across 9 Dedicated Suites**, HTTP 403 Forbidden Matrix, Physiological DTO Validation.
+* **Visuals**: Jest Terminal Output showing **60/60 Passing Tests across 10 Dedicated Suites**, HTTP 403 Forbidden Matrix, Physiological DTO Validation.
 * **Speaking Script**:
   > *"Thank you, Edson. As QA Lead, my objective was to guarantee absolute clinical software reliability and enforce strict medical-legal access boundaries.*  
-  > *CareSync features **56 automated unit and integration tests** passing with $100\%$ green status across 9 dedicated test suites:*  
+  > *CareSync features **60 automated unit and integration tests** passing with $100\%$ green status across 10 dedicated test suites:*  
   > *1. **Role Boundary Enforcement**: Our tests assert that non-physician staff (such as Receptionists) are strictly barred with HTTP 403 Forbidden when attempting to diagnose, sign clinical notes, or prescribe medications.*  
   > *2. **Physiological DTO Boundary Validation**: We validated that vitals input adheres to strict physiological thresholds using NestJS `class-validator`. Biologically impossible readings (e.g. systolic BP > 300 or heart rate < 20) are automatically rejected with HTTP 400 Bad Request.*  
   > *3. **End-to-End Hospital Lifecycle Suite (`[QA-504]`)**: We verified the complete outpatient journey: walk-in intake $\rightarrow$ room assignment $\rightarrow$ doctor consultation $\rightarrow$ diagnostic lab order $\rightarrow$ lab tech verification $\rightarrow$ e-prescription $\rightarrow$ patient discharge. I now pass to John Loyd Balbuena."*
@@ -107,7 +107,7 @@ timeline
   > *"Thank you, Christian. In healthcare informatics, system downtime directly impacts patient safety. As DevOps Lead, I architected a zero-downtime deployment and disaster recovery infrastructure:*  
   > *1. **Multi-Container Docker Environment**: Our `docker-compose.yml` orchestrates PostgreSQL 16 and Redis 7 with integrated container healthchecks and automated initialization scripts.*  
   > *2. **Automated Backup & Pruning Utility**: We deployed automated database backup scripts (`scripts/backup-db.ps1`) with rolling 7-day retention. Every night, a timestamped snapshot is captured and archived, with older dumps safely pruned.*  
-  > *3. **Continuous Integration Pipeline**: In GitHub Actions (`.github/workflows/ci.yml`), every push automatically checks out code, installs dependencies, verifies database migrations, and runs all 56 unit and security tests before code can merge into production.*  
+  > *3. **Continuous Integration Pipeline**: In GitHub Actions (`.github/workflows/ci.yml`), every push automatically checks out code, installs dependencies, verifies database migrations, and runs all 60 unit and security tests before code can merge into production.*  
   > *4. **Live Presentation Reset**: We authored a 1-command reset tool (`scripts/reset-demo.ps1`) ensuring our live presentation environment can be primed in under 2 seconds.*  
   > *Thank you. We will now demonstrate the live system and open the floor to the panel."*
 
@@ -211,6 +211,6 @@ flowchart TD
 | **System Architecture & Clean Separation** | 20 pts | NestJS modular controllers/services, Next.js 16 App Router, TypeORM entity relations | ✅ **Exemplary** |
 | **Security, HIPAA & Cryptography** | 20 pts | AES-256-GCM envelope encryption, Argon2id hashing, WORM audit logs, Scoped RBAC | ✅ **Exemplary** |
 | **Clinical UI/UX & Anti-Glare Design** | 20 pts | Anti-glare slate theme (`#eaedf2`), 5-tab doctor workstation, department room tabs, PDF export | ✅ **Exemplary** |
-| **Software Quality, Testing & Safety** | 20 pts | **56/56 passing tests across 9 suites**, HTTP 403 role boundary assertions, physiological DTO validation | ✅ **Exemplary** |
+| **Software Quality, Testing & Safety** | 20 pts | **60/60 passing tests across 10 suites**, HTTP 403 role boundary assertions, physiological DTO validation | ✅ **Exemplary** |
 | **DevOps, CI/CD & Disaster Recovery** | 20 pts | Docker orchestration, Neon pooling, rolling 7-day backups (`backup-db.ps1`), 2s demo reset | ✅ **Exemplary** |
 | **Total Score** | **100 pts** | **Defensible, Production-Ready Outpatient Hospital System** | **100 / 100** |

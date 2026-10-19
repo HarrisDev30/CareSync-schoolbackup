@@ -2,7 +2,7 @@
 
 * **Sprint Cycle:** Sprint 6 (Closed-Loop Clinical Workflows, Patient Self-Service & Facility Turnover Automation)
 * **Team:** Group 2 (CareSync Development Team)
-* **Status:** 🚧 **IN PROGRESS (3/6 in Done — [FE-701], [FE-702], [BE-601] Delivered)**
+* **Status:** 🚧 **IN PROGRESS (5/6 in Done — [FE-701], [FE-702], [BE-601], [FE-703], [FE-704] Delivered)**
 * **Target Throughput:** $100\%$ operational completion across all user roles
 * **Core Principle:** Complete End-to-End User Story Parity (Zero Dead Ends, Zero Broken Loops)
 
@@ -89,31 +89,31 @@
 ### 3. 🎨 Frontend Specialist (Assignee: `@Edson Sode` / `@Harris Asani`)
 
 #### Card Title: `[FE-703] Administrator Staff Account Profile Editing Modal (/users)`
-* **Column:** `⏳ To Do`
+* **Column:** `✅ Done`
 * **Member:** `@Edson Sode`
 * **Labels:** `Frontend` (Orange), `Sprint-6` (Teal), `RBAC` (Purple)
 * **User Story:**  
   *“As a Hospital Security Administrator, I want to edit a staff member's department assignment, clinical license number, or contact details, so staff records reflect clinical reassignments without recreating accounts.”*
 * **Checklist (Acceptance Criteria):**
-  - [ ] Add an **"Edit"** action button on each staff row in `/users` opening `EditStaffModal`
-  - [ ] Allow editing `firstName`, `lastName`, `department` (with department presets based on role), and `licenseNumber`
-  - [ ] Connect to `updateStaffAccount()` calling backend `PUT /api/v1/admin/users/:id` with resilient local storage fallback
-  - [ ] Record `STAFF_ACCOUNT_UPDATED` in the HIPAA Audit Log
+  - [x] Add an **"Edit"** action button on each staff row in `/users` opening `EditStaffModal`
+  - [x] Allow editing `firstName`, `lastName`, `department` (with department presets based on role), and `licenseNumber`
+  - [x] Connect to `updateStaffAccount()` calling backend `PUT /api/v1/admin/users/:id` with resilient local storage fallback
+  - [x] Record `STAFF_ACCOUNT_MODIFIED` in the HIPAA Audit Log
 * **Sample Activity Comment:**  
   *"Added staff account profile editing modal in /users for department transfers and credential updates."*
 
 ---
 
 #### Card Title: `[FE-704] Certified Diagnostic Laboratory Report PDF Export & Pathologist Sign-Off`
-* **Column:** `⏳ To Do`
+* **Column:** `✅ Done`
 * **Member:** `@Edson Sode` / `@Harris Asani`
 * **Labels:** `Frontend` (Orange), `Sprint-6` (Teal), `Diagnostics` (Cyan)
 * **User Story:**  
   *“As a laboratory technologist or physician, when diagnostic results are verified, I want to export an official certified laboratory report in print-ready PDF format with hospital letterhead, reference ranges, and pathologist signature.”*
 * **Checklist (Acceptance Criteria):**
-  - [ ] Build `DiagnosticReportExportModal` for verified lab orders in `/labs` and `/patient-portal?tab=labs`
-  - [ ] Render official hospital banner, requisition barcode/accession number, specimen collection time, verifying technologist signature block, and tabular parameters with abnormal/panic highlights
-  - [ ] Provide 1-click browser print / PDF download matching clinical laboratory standards
+  - [x] Build `DiagnosticReportExportModal` for verified lab orders in `/labs` and `/patient-portal?tab=labs`
+  - [x] Render official hospital banner, requisition barcode/accession number, specimen collection time, verifying technologist signature block, and tabular parameters with abnormal/panic highlights
+  - [x] Provide 1-click browser print / PDF download matching clinical laboratory standards
 * **Sample Activity Comment:**  
   *"Built certified Diagnostic Laboratory Report export dialog with letterhead and reference range table."*
 

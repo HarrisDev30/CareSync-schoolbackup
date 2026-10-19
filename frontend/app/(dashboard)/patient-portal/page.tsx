@@ -21,6 +21,7 @@ import {
   CalendarX,
   X,
   AlertCircle,
+  Printer,
 } from 'lucide-react';
 import {
   fetchPatientPortalData,
@@ -48,6 +49,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MedicalRecordExportModal } from '@/components/medical-record-export-modal';
+import { DiagnosticReportExportModal } from '@/components/diagnostic-report-export-modal';
 import { BookAppointmentModal } from './_components/book-appointment-modal';
 import { CancelAppointmentModal } from './_components/cancel-appointment-modal';
 
@@ -65,6 +67,7 @@ function PatientPortalContent() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [dischargeSummary, setDischargeSummary] = useState<DischargeSummary | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [selectedExportLab, setSelectedExportLab] = useState<LabOrder | null>(null);
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [cancellingApt, setCancellingApt] = useState<Appointment | null>(null);
   const [confirmingAptId, setConfirmingAptId] = useState<string | null>(null);
@@ -691,6 +694,18 @@ function PatientPortalContent() {
                       })}
                     </CardDescription>
                   </div>
+                  {lab.results && lab.results.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedExportLab(lab)}
+                      className="h-8 text-xs px-2.5 gap-1.5 cursor-pointer bg-primary/10 text-primary hover:bg-primary/20 border-primary/30 shadow-2xs shrink-0 self-start sm:self-center"
+                      title="Download Certified Official Laboratory Report (PDF)"
+                    >
+                      <Printer className="size-3.5" />
+                      <span>Certified PDF Report</span>
+                    </Button>
+                  )}
                 </CardHeader>
 
                 <CardContent className="p-4 sm:p-5 space-y-4">
@@ -869,6 +884,13 @@ function PatientPortalContent() {
         isOpen={!!cancellingApt}
         onClose={() => setCancellingApt(null)}
         onAppointmentCancelled={handleAppointmentCancelled}
+      />
+
+      {/* Official Certified PDF Report Modal [FE-704] */}
+      <DiagnosticReportExportModal
+        isOpen={!!selectedExportLab}
+        onClose={() => setSelectedExportLab(null)}
+        order={selectedExportLab}
       />
     </div>
   );

@@ -27,6 +27,7 @@ import {
   FlaskConical,
   Check,
   Loader2,
+  Printer,
 } from 'lucide-react';
 import {
   Patient,
@@ -74,6 +75,7 @@ import {
 } from '@/lib/api';
 import { evaluatePrescriptionSafety, CdsEvaluationResult } from '@/lib/cds-engine';
 import { MedicalRecordExportModal } from '@/components/medical-record-export-modal';
+import { DiagnosticReportExportModal } from '@/components/diagnostic-report-export-modal';
 
 interface PatientChartModalProps {
   patient: Patient | null;
@@ -247,6 +249,7 @@ export function PatientChartModal({
 
   // Export Modal State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [selectedReportOrder, setSelectedReportOrder] = useState<LabOrder | null>(null);
 
   // Consultations State
   const [consultations, setConsultations] = useState<Consultation[]>([]);
@@ -2142,12 +2145,24 @@ export function PatientChartModal({
                               )}
 
                               {(order.verifiedBy || isVerified) && (
-                                <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 pt-1">
-                                  <CheckCircle2 className="size-3.5 shrink-0" />
-                                  <span>
-                                    Certified & Released by <strong>{order.verifiedBy || 'Dr. Elena Rostova, MD (Clinical Pathologist)'}</strong>
-                                    {order.verifiedAt && ` on ${new Date(order.verifiedAt).toLocaleDateString()}`}
-                                  </span>
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-border/60">
+                                  <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
+                                    <CheckCircle2 className="size-3.5 shrink-0" />
+                                    <span>
+                                      Certified & Released by <strong>{order.verifiedBy || 'Dr. Elena Rostova, MD (Clinical Pathologist)'}</strong>
+                                      {order.verifiedAt && ` on ${new Date(order.verifiedAt).toLocaleDateString()}`}
+                                    </span>
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSelectedReportOrder(order)}
+                                    className="h-7 text-xs px-2.5 gap-1.5 cursor-pointer bg-primary/10 text-primary hover:bg-primary/20 border-primary/30 shadow-2xs self-start sm:self-auto"
+                                    title="Export Official Certified Diagnostic Laboratory Report (PDF)"
+                                  >
+                                    <Printer className="size-3" />
+                                    <span>Export Official Report</span>
+                                  </Button>
                                 </div>
                               )}
                             </div>
@@ -2683,6 +2698,13 @@ export function PatientChartModal({
       vitals={historyVitals}
       medications={medications}
       dischargeSummary={dischargeSummary}
+    />
+
+    {/* Official Certified Diagnostic Report PDF Modal [FE-704] */}
+    <DiagnosticReportExportModal
+      isOpen={!!selectedReportOrder}
+      onClose={() => setSelectedReportOrder(null)}
+      order={selectedReportOrder}
     />
   </>
   );

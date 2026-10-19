@@ -29,6 +29,7 @@ import {
   CreateCorrectionInput,
   StaffAccount,
   CreateStaffAccountInput,
+  UpdateStaffAccountInput,
   StaffRole,
 } from '../types';
 
@@ -2640,6 +2641,81 @@ export async function createStaffAccount(
   });
 
   return { success: true, data: newAccount };
+}
+
+export async function updateStaffAccount(
+  input: UpdateStaffAccountInput,
+): Promise<{ success: boolean; data?: StaffAccount; error?: string }> {
+  if (!input.id) {
+    return { success: false, error: 'Staff account ID is required.' };
+  }
+
+  const existing = getStoredStaffDirectory();
+  const idx = existing.findIndex((u) => u.id === input.id);
+  if (idx === -1) {
+    return { success: false, error: 'Staff account record not found.' };
+  }
+
+  const current = existing[idx];
+
+  // Try updating on backend if available
+  try {
+    const adminUser = STAFF_PRESETS.find((s) => s.role === 'ADMINISTRATOR') || STAFF_PRESETS[3];
+    const token = await getValidAuthToken(adminUser);
+    await fetch(`${API_BASE_URL}/admin/users/${input.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({
+        firstName: input.firstName?.trim() || current.firstName,
+        lastName: input.lastName?.trim() || current.lastName,
+        department: input.department?.trim() || current.department,
+        role: input.role || current.role,
+        licenseNumber: input.licenseNumber !== undefined ? input.licenseNumber.trim() : current.licenseNumber,
+      }),
+    });
+  } catch {
+    // local fallback
+  }
+
+  const updatedFirstName = input.firstName !== undefined ? input.firstName.trim() : current.firstName;
+  const updatedLastName = input.lastName !== undefined ? input.lastName.trim() : current.lastName;
+  const updatedRole = input.role || current.role;
+  const prefix = updatedRole === 'PHYSICIAN' ? 'Dr. ' : '';
+  const suffix = updatedRole === 'PHYSICIAN' ? ', MD' : updatedRole === 'LABORATORY_USER' ? ', CLS' : '';
+
+  const updatedAccount: StaffAccount = {
+    ...current,
+    firstName: updatedFirstName,
+    lastName: updatedLastName,
+    fullName: `${prefix}${updatedFirstName} ${updatedLastName}${suffix}`,
+    role: updatedRole,
+    department: input.department !== undefined ? input.department.trim() : current.department,
+    licenseNumber: input.licenseNumber !== undefined ? input.licenseNumber.trim() : current.licenseNumber,
+  };
+
+  existing[idx] = updatedAccount;
+  saveStoredStaffDirectory(existing);
+
+  recordAuditLogEntry({
+    action: 'STAFF_ACCOUNT_MODIFIED',
+    resource: 'users',
+    resourceId: updatedAccount.id,
+    userId: 'u-5',
+    userEmail: 'admin@caresync.org',
+    userRole: 'ADMINISTRATOR',
+    ipAddress: '192.168.1.10',
+    metadata: {
+      staffEmail: updatedAccount.email,
+      assignedRole: updatedAccount.role,
+      department: updatedAccount.department,
+      licenseNumber: updatedAccount.licenseNumber,
+    },
+  });
+
+  return { success: true, data: updatedAccount };
 }
 
 export async function revokeStaffAccess(

@@ -15,6 +15,7 @@ import {
   Loader2,
   ChevronRight,
   ExternalLink,
+  Printer,
 } from 'lucide-react';
 import { LabOrder } from '@/types';
 import {
@@ -28,6 +29,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { DiagnosticReportExportModal } from '@/components/diagnostic-report-export-modal';
 
 export interface ResultsFindingsModalProps {
   order: LabOrder | null;
@@ -45,6 +47,7 @@ export function ResultsFindingsModal({
   const [reviewNotes, setReviewNotes] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   if (!order) return null;
@@ -397,23 +400,43 @@ export function ResultsFindingsModal({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="px-6 py-3 border-t border-border bg-card flex items-center justify-between sm:justify-between">
+        <DialogFooter className="px-6 py-3 border-t border-border bg-card flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-mono">
             <span className="inline-block size-1.5 rounded-full bg-emerald-500" />
             CareSync HIPAA-Compliant Diagnostic Protocol
           </span>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onClose}
-            className="h-8.5 text-xs cursor-pointer"
-          >
-            Close Findings
-          </Button>
+          <div className="flex items-center gap-2">
+            {results.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsExportOpen(true)}
+                className="h-8.5 text-xs gap-1.5 cursor-pointer bg-primary/10 text-primary hover:bg-primary/20 border-primary/30"
+              >
+                <Printer className="size-3.5" />
+                <span>Export Certified PDF</span>
+              </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onClose}
+              className="h-8.5 text-xs cursor-pointer"
+            >
+              Close Findings
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
+      {/* Official Certified PDF Report Modal [FE-704] */}
+      <DiagnosticReportExportModal
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        order={order}
+      />
     </Dialog>
   );
 }

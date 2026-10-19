@@ -73,10 +73,10 @@ flowchart TD
 # 1. Reset & Seed Live Database with Demo Data (Under 2 Seconds)
 powershell -ExecutionPolicy Bypass -File .\scripts\reset-demo.ps1
 
-# 2. Run Complete Backend Test Suite Verification (56/56 Tests Green)
+# 2. Run Complete Backend Test Suite Verification (60/60 Tests Across 10 Suites Green)
 cmd /c "npm test"
 
-# 3. Verify Frontend Production Build (11/11 Static Pages Generated)
+# 3. Verify Frontend Production Build (12/12 Static Pages Generated)
 cd frontend
 cmd /c "npm run build"
 ```
