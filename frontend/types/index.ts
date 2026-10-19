@@ -185,6 +185,44 @@ export interface VitalSigns {
 
 export type ConsultationStatus = 'DRAFT' | 'FINALIZED';
 
+export interface ConsultationCorrection {
+  id: string;
+  consultationId: string;
+  amendedBy: string;
+  amendedByName: string;
+  amendmentReason: string;
+  previousSnapshot: {
+    chiefComplaint: string;
+    physicalExamination?: string;
+    primaryDiagnosisDescription: string;
+    primaryDiagnosisCode?: string;
+    treatmentPlan: string;
+    vitalSigns?: VitalSigns;
+  };
+  updatedFields: {
+    chiefComplaint: string;
+    physicalExamination?: string;
+    primaryDiagnosisDescription: string;
+    primaryDiagnosisCode?: string;
+    treatmentPlan: string;
+    vitalSigns?: VitalSigns;
+  };
+  createdAt: string;
+}
+
+export interface CreateCorrectionInput {
+  consultationId: string;
+  amendmentReason: string;
+  chiefComplaint: string;
+  physicalExamination?: string;
+  primaryDiagnosisDescription: string;
+  primaryDiagnosisCode?: string;
+  treatmentPlan: string;
+  vitalSigns?: VitalSigns;
+  amendedBy?: string;
+  amendedByName?: string;
+}
+
 export interface Consultation {
   id: string;
   patientId: string;
@@ -201,6 +239,7 @@ export interface Consultation {
   finalizedAt?: string;
   createdAt: string;
   updatedAt?: string;
+  corrections?: ConsultationCorrection[];
 }
 
 export interface CreateConsultationInput {
@@ -295,3 +334,33 @@ export interface UpdateRoomInput {
   expectedDurationMinutes?: number;
   notes?: string;
 }
+
+export type StaffRole = 'PHYSICIAN' | 'RECEPTIONIST' | 'LABORATORY_USER' | 'ADMINISTRATOR';
+
+export interface StaffAccount {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  role: StaffRole;
+  department: string;
+  licenseNumber?: string;
+  isActive: boolean;
+  sessionLocked: boolean;
+  lastActiveAt?: string;
+  revokedAt?: string;
+  revokedReason?: string;
+  createdAt: string;
+}
+
+export interface CreateStaffAccountInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password?: string;
+  role: StaffRole;
+  department: string;
+  licenseNumber?: string;
+}
+

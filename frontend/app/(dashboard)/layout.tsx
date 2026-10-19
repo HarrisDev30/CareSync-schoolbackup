@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   Lock,
   Unlock,
@@ -126,18 +126,35 @@ export default function DashboardLayout({
     return { title: 'CareSync Admissions', href: '/' };
   };
 
+function DynamicBreadcrumbPage({ pathname }: { pathname: string }) {
+  const searchParams = useSearchParams();
+  const tab = searchParams.get('tab') || 'overview';
+
   const getPageTitle = () => {
-    if (pathname === '/patient-portal') return 'My Patient Health Portal';
+    if (pathname === '/patient-portal') {
+      if (tab === 'appointments') return 'My Appointments';
+      if (tab === 'labs') return 'Diagnostic Results';
+      if (tab === 'medications') return 'Prescriptions & Care';
+      return 'My Health Record';
+    }
     if (pathname === '/') return 'Front Desk Overview';
     if (pathname.startsWith('/patients')) return 'Patient Admissions & Registry';
     if (pathname.startsWith('/appointments')) return 'Consultation Scheduling & Triage';
     if (pathname.startsWith('/labs')) return 'Diagnostic Services & Lab Orders';
     if (pathname.startsWith('/analytics')) return 'Executive Analytics';
-    if (pathname.startsWith('/rooms')) return 'Rooms';
+    if (pathname.startsWith('/rooms')) return 'Facility & Room Directory';
+    if (pathname.startsWith('/users')) return 'Staff & Access Control';
     if (pathname.startsWith('/audit-logs')) return 'Compliance Audit Logs';
     const cleaned = pathname.replace(/^\//, '').replace(/-/g, ' ');
     return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
   };
+
+  return (
+    <BreadcrumbPage className="text-sm font-semibold text-foreground truncate">
+      {getPageTitle()}
+    </BreadcrumbPage>
+  );
+}
 
   const roleHeader = getRoleHeaderInfo();
 
@@ -230,9 +247,15 @@ export default function DashboardLayout({
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem className="min-w-0">
-                  <BreadcrumbPage className="text-sm font-semibold text-foreground truncate">
-                    {getPageTitle()}
-                  </BreadcrumbPage>
+                  <Suspense
+                    fallback={
+                      <BreadcrumbPage className="text-sm font-semibold text-foreground truncate">
+                        CareSync
+                      </BreadcrumbPage>
+                    }
+                  >
+                    <DynamicBreadcrumbPage pathname={pathname} />
+                  </Suspense>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>

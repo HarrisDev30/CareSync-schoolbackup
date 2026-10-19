@@ -2,8 +2,8 @@
 
 * **Sprint Cycle:** Sprint 3 (Clinical Closure, Patient Portal Experience & Audit Defense Readiness)
 * **Team:** Group 2 (CareSync Development Team)
-* **Status:** ⏳ **READY FOR SPRINT 3 EXECUTION**
-* **Target Throughput:** $\ge 85\%$ completion rate with 0 stale cards
+* **Status:** ✅ **COMPLETED & READY FOR TRELLO (100% Throughput — 6/6 Cards in Done)**
+* **Target Throughput:** $\ge 85\%$ completion rate with 0 stale cards (Achieved: **100%**)
 * **Core Principle:** 100% Core Hospital System Scope (Zero Telemedicine)
 
 ---
@@ -11,10 +11,11 @@
 ## 🎯 1. Sprint 3 Goal & Epic
 
 ### `[SPRINT-3] Epic: Clinical Closure, Patient Portal Experience & Audit Defense Readiness`
-* **Column:** `⏳ Sprint 3: To Do`
+* **Column:** `✅ Done`
 * **Labels:** `Sprint-3` (Purple), `Epic` (Blue)
 * **Sprint Goal Statement:**  
   *"Complete the end-to-end outpatient healthcare journey from clinical diagnosis to resolution: empower physicians to issue official electronic prescriptions (Rx) and discharge summaries, deliver a transparent Patient Health Portal with verified lab results and medication timelines, provide administrators with an immutable HIPAA audit workbench, and prepare the live multi-role defense demonstration."*
+
 
 ---
 
@@ -130,8 +131,9 @@
 
 ## 📦 4. Future Product Backlog Cards (Column: `📋 Product Backlog`)
 
-These standing cards remain in the product backlog to demonstrate long-term system vision:
-1. `[FEAT-601] WebRTC Telemedicine Video Room for Virtual Consultations (Future Milestone)`
-2. `[FEAT-602] Twilio / SendGrid SMS & Email Automated Appointment Reminders (Future Milestone)`
-3. `[FEAT-603] Biometric & Smart Card Single Sign-On for Hospital Staff (Future Milestone)`
-4. `[FEAT-604] Clinical Trend Analytics & Disease Surveillance Dashboard (Future Milestone)`
+These standing cards advance into Sprint 4 & Future Milestones:
+1. `[FEAT-601] Hospital Facility & Department Wing Room Management (/rooms) (Sprint 4)`
+2. `[FEAT-602] Clinical Decision Support (CDS) & Drug Allergy Safety Engine (Sprint 4)`
+3. `[FEAT-603] Executive Hospital Census & Diagnostic TAT Analytics Dashboard (/analytics) (Sprint 4)`
+4. `[FEAT-604] Administrator Staff Access Governance & Record Addendum UI (Sprint 5)`
+

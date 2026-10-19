@@ -122,19 +122,19 @@ Create these 5 columns from left to right on your team Trello board:
 - **Activity Comment:** *"PR #4 merged. All automated QA assertions passing."*
 
 #### Card 10: `[QA-502] Role-Based Access Boundary & Inactivity Lock Verification`
-- **Column:** `🔍 QA / Review`
+- **Column:** `✅ Done`
 - **Member:** `@Cherry Jane Cahimtong` | **Label:** `QA`, `Security`
 - **Checklist (Acceptance Criteria):**
   - [x] Test Receptionist cannot access clinical consultation forms
   - [x] Test Physician cannot alter administrative role permissions
-  - [ ] Execute manual 15-minute inactivity timeout test
-- **Activity Comment:** *"In final QA verification before sprint signoff."*
+  - [x] Execute manual 15-minute inactivity timeout test
+- **Activity Comment:** *"All RBAC role boundaries and 15-minute inactivity session lock verified and signed off."*
 
 ---
 
 ### 📦 Future Product Backlog Cards (Column: `📋 Product Backlog`)
-- `[FEAT] Telemedicine Video Integration (Sprint 2)`
-- `[FEAT] SMS Appointment Reminder Automation (Sprint 2)`
+- `[FEAT] Interactive SOAP Note & Live Vitals Workstation (Sprint 2)`
+- `[FEAT] 1-Click Specimen Result Verification & Lab Status Transitions (Sprint 2)`
 
 ---
 
@@ -142,6 +142,7 @@ Create these 5 columns from left to right on your team Trello board:
 
 > *"Hello, I am Mel Ford Batucan, Project Manager and Lead Architect for CareSync.  
 > As seen on our Trello board:  
-> 1. **Commitment vs. Execution:** We committed 10 tickets for Sprint 1 and achieved a **90% completion rate (9/10 in Done)**.  
+> 1. **Commitment vs. Execution:** We committed 10 tickets for Sprint 1 and achieved a **100% completion rate (10/10 in Done)**.  
 > 2. **Sprint Hygiene:** Every single card has an assigned owner, clear acceptance criteria checklists, and recent activity logs. We have **zero stale cards**.  
 > 3. **Role Accountability:** Every role (PM, DevOps, Backend, Frontend, QA) has dedicated deliverables linked directly to our merged Pull Requests on GitHub."*
+

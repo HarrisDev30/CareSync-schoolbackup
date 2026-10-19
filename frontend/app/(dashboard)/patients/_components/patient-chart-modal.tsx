@@ -60,6 +60,7 @@ import {
   fetchConsultations,
   createConsultation,
   finalizeConsultation,
+  submitConsultationCorrection,
   getStoredMedications,
   createPrescription,
   dischargePatient,
@@ -491,6 +492,60 @@ export function PatientChartModal({
     }
   };
 
+  // Safe Medical Record Correction / Addendum State [FE-602]
+  const [amendingNoteId, setAmendingNoteId] = useState<string | null>(null);
+  const [amendmentReason, setAmendmentReason] = useState('');
+  const [amendChiefComplaint, setAmendChiefComplaint] = useState('');
+  const [amendPhysicalExam, setAmendPhysicalExam] = useState('');
+  const [amendDiagnosisCode, setAmendDiagnosisCode] = useState('');
+  const [amendDiagnosisDesc, setAmendDiagnosisDesc] = useState('');
+  const [amendTreatmentPlan, setAmendTreatmentPlan] = useState('');
+  const [expandedLedgerNoteId, setExpandedLedgerNoteId] = useState<string | null>(null);
+
+  const handleStartAmend = (note: Consultation) => {
+    setAmendingNoteId(note.id);
+    setAmendmentReason('Diagnostic refinement following verified laboratory findings');
+    setAmendChiefComplaint(note.chiefComplaint);
+    setAmendPhysicalExam(note.physicalExamination || 'Normal physical findings on examination.');
+    setAmendDiagnosisCode(note.primaryDiagnosisCode || '');
+    setAmendDiagnosisDesc(note.primaryDiagnosisDescription);
+    setAmendTreatmentPlan(note.treatmentPlan);
+  };
+
+  const handleSubmitCorrection = async (note: Consultation) => {
+    setIsSubmitting(true);
+    try {
+      const res = await submitConsultationCorrection({
+        consultationId: note.id,
+        amendmentReason,
+        chiefComplaint: amendChiefComplaint,
+        physicalExamination: amendPhysicalExam,
+        primaryDiagnosisCode: amendDiagnosisCode,
+        primaryDiagnosisDescription: amendDiagnosisDesc,
+        treatmentPlan: amendTreatmentPlan,
+        vitalSigns: note.vitalSigns,
+        amendedByName: note.physicianName || 'Dr. Sarah Chen, MD',
+      });
+
+      if (res.success && res.data) {
+        setConsultations((prev) =>
+          prev.map((c) => (c.id === note.id ? res.data! : c)),
+        );
+        setAmendingNoteId(null);
+        setExpandedLedgerNoteId(note.id);
+        showNotice(
+          'success',
+          'Safe Record Correction appended. Original record preserved in immutable revision ledger.',
+        );
+        onConsultationSaved?.();
+      } else {
+        showNotice('error', res.error || 'Could not submit record correction.');
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleApplyPreset = (preset: (typeof ICD10_PRESETS)[0]) => {
     setPrimaryDiagnosisCode(preset.code);
     setPrimaryDiagnosisDescription(preset.desc);
@@ -754,15 +809,50 @@ export function PatientChartModal({
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="flex items-center gap-2 shrink-0 flex-wrap">
                             {isFinalized ? (
-                              <Badge
-                                variant="outline"
-                                className="gap-1.5 text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                              >
-                                <ShieldCheck className="size-3.5" />
-                                <span>Signed & Finalized</span>
-                              </Badge>
+                              <>
+                                <Badge
+                                  variant="outline"
+                                  className="gap-1.5 text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                >
+                                  <ShieldCheck className="size-3.5" />
+                                  <span>Signed & Finalized</span>
+                                </Badge>
+                                {note.corrections && note.corrections.length > 0 && (
+                                  <Badge
+                                    variant="outline"
+                                    onClick={() =>
+                                      setExpandedLedgerNoteId(
+                                        expandedLedgerNoteId === note.id ? null : note.id,
+                                      )
+                                    }
+                                    className="gap-1 text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30 cursor-pointer"
+                                  >
+                                    <History className="size-3" />
+                                    <span>
+                                      Amended ({note.corrections.length})
+                                    </span>
+                                  </Badge>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    amendingNoteId === note.id
+                                      ? setAmendingNoteId(null)
+                                      : handleStartAmend(note)
+                                  }
+                                  className="h-7 px-2.5 text-xs gap-1 border-border hover:bg-muted cursor-pointer"
+                                >
+                                  <FileSignature className="size-3 text-primary" />
+                                  <span>
+                                    {amendingNoteId === note.id
+                                      ? 'Cancel Addendum'
+                                      : 'Amend / Add Correction'}
+                                  </span>
+                                </Button>
+                              </>
                             ) : (
                               <div className="flex items-center gap-2">
                                 <Badge
@@ -785,6 +875,111 @@ export function PatientChartModal({
                             )}
                           </div>
                         </div>
+
+                        {/* Safe Medical Record Correction Form (Original -> Correction -> Updated -> Audit) */}
+                        {amendingNoteId === note.id && (
+                          <div className="p-3.5 rounded-lg border border-primary/30 bg-primary/5 space-y-3 text-xs">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="font-semibold text-foreground flex items-center gap-1.5">
+                                <FileSignature className="size-3.5 text-primary" />
+                                <span>
+                                  Safe Medical Record Correction (Append-Only Revision Ledger)
+                                </span>
+                              </div>
+                              <Badge variant="outline" className="text-[10px] font-mono">
+                                Original Record Preserved
+                              </Badge>
+                            </div>
+
+                            <div className="space-y-1">
+                              <label className="text-[11px] font-semibold text-foreground">
+                                Mandatory Legal Amendment Reason
+                              </label>
+                              <Input
+                                value={amendmentReason}
+                                onChange={(e) => setAmendmentReason(e.target.value)}
+                                placeholder="State clinical or clerical reason for amending signed note..."
+                                className="h-8 text-xs bg-background"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                              <div className="space-y-1">
+                                <label className="text-[11px] font-medium text-muted-foreground">
+                                  Updated S — Subjective / Chief Complaint
+                                </label>
+                                <Textarea
+                                  rows={2}
+                                  value={amendChiefComplaint}
+                                  onChange={(e) => setAmendChiefComplaint(e.target.value)}
+                                  className="text-xs bg-background"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[11px] font-medium text-muted-foreground">
+                                  Updated O — Physical Exam Findings
+                                </label>
+                                <Textarea
+                                  rows={2}
+                                  value={amendPhysicalExam}
+                                  onChange={(e) => setAmendPhysicalExam(e.target.value)}
+                                  className="text-xs bg-background"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[11px] font-medium text-muted-foreground">
+                                  Updated A — Clinical Diagnosis & ICD-10
+                                </label>
+                                <div className="flex gap-1.5">
+                                  <Input
+                                    value={amendDiagnosisCode}
+                                    onChange={(e) => setAmendDiagnosisCode(e.target.value)}
+                                    placeholder="ICD-10"
+                                    className="h-8 w-24 text-xs font-mono bg-background"
+                                  />
+                                  <Input
+                                    value={amendDiagnosisDesc}
+                                    onChange={(e) => setAmendDiagnosisDesc(e.target.value)}
+                                    placeholder="Primary diagnosis description"
+                                    className="h-8 flex-1 text-xs bg-background"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[11px] font-medium text-muted-foreground">
+                                  Updated P — Treatment Plan & Instructions
+                                </label>
+                                <Input
+                                  value={amendTreatmentPlan}
+                                  onChange={(e) => setAmendTreatmentPlan(e.target.value)}
+                                  className="h-8 text-xs bg-background"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-1">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setAmendingNoteId(null)}
+                                className="h-7 text-xs cursor-pointer"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                disabled={isSubmitting}
+                                onClick={() => handleSubmitCorrection(note)}
+                                className="h-7 text-xs gap-1.5 cursor-pointer"
+                              >
+                                <ShieldCheck className="size-3.5" />
+                                <span>Append Signed Correction</span>
+                              </Button>
+                            </div>
+                          </div>
+                        )}
 
                         {/* SOAP Body */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
@@ -861,6 +1056,83 @@ export function PatientChartModal({
                             </p>
                           </div>
                         </div>
+
+                        {/* Immutable Revision History Ledger (Original Record -> Correction -> Updated Record) */}
+                        {note.corrections && note.corrections.length > 0 && (
+                          <div className="rounded-lg border border-border bg-muted/25 p-3 space-y-2 text-xs">
+                            <div className="flex items-center justify-between">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setExpandedLedgerNoteId(
+                                    expandedLedgerNoteId === note.id ? null : note.id,
+                                  )
+                                }
+                                className="font-semibold text-foreground flex items-center gap-1.5 cursor-pointer hover:text-primary"
+                              >
+                                <History className="size-3.5 text-primary" />
+                                <span>
+                                  Immutable Revision Ledger ({note.corrections.length}{' '}
+                                  {note.corrections.length === 1 ? 'Addendum' : 'Addenda'} — Original Record Preserved)
+                                </span>
+                              </button>
+                              <span className="text-[10px] font-mono text-muted-foreground">
+                                {expandedLedgerNoteId === note.id ? 'Hide History' : 'View Original Snapshot'}
+                              </span>
+                            </div>
+
+                            {expandedLedgerNoteId === note.id && (
+                              <div className="space-y-2 pt-1.5 border-t border-border/60">
+                                {note.corrections.map((corr, idx) => (
+                                  <div
+                                    key={corr.id}
+                                    className="rounded-md border border-border bg-card p-2.5 space-y-1.5 text-[11px]"
+                                  >
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <span className="font-semibold text-foreground">
+                                        Revision #{note.corrections!.length - idx} • {corr.amendedByName}
+                                      </span>
+                                      <span className="font-mono text-muted-foreground">
+                                        {new Date(corr.createdAt).toLocaleString()}
+                                      </span>
+                                    </div>
+                                    <div className="text-primary font-medium">
+                                      Reason: &ldquo;{corr.amendmentReason}&rdquo;
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                      <div className="p-2 rounded bg-muted/50 border border-border/70">
+                                        <div className="font-mono text-[10px] uppercase text-muted-foreground mb-0.5">
+                                          Original Record Snapshot
+                                        </div>
+                                        <div className="text-foreground font-medium">
+                                          {corr.previousSnapshot.primaryDiagnosisDescription}{' '}
+                                          {corr.previousSnapshot.primaryDiagnosisCode &&
+                                            `(${corr.previousSnapshot.primaryDiagnosisCode})`}
+                                        </div>
+                                        <div className="text-muted-foreground mt-0.5">
+                                          Plan: {corr.previousSnapshot.treatmentPlan}
+                                        </div>
+                                      </div>
+                                      <div className="p-2 rounded bg-emerald-500/5 border border-emerald-500/20">
+                                        <div className="font-mono text-[10px] uppercase text-emerald-700 dark:text-emerald-400 mb-0.5">
+                                          Updated Record
+                                        </div>
+                                        <div className="text-foreground font-medium">
+                                          {corr.updatedFields.primaryDiagnosisDescription}{' '}
+                                          {corr.updatedFields.primaryDiagnosisCode &&
+                                            `(${corr.updatedFields.primaryDiagnosisCode})`}
+                                        </div>
+                                        <div className="text-muted-foreground mt-0.5">
+                                          Plan: {corr.updatedFields.treatmentPlan}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* Note Metadata Footer */}
                         <div className="pt-1 flex items-center justify-between text-[11px] text-muted-foreground border-t border-border/50">

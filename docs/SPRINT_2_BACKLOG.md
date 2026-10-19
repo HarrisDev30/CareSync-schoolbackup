@@ -1,19 +1,21 @@
 # 📋 CareSync — Sprint 2 Backlog & Trello Specification
 
-* **Sprint Cycle:** Sprint 2 (Interactive Clinical Care, Diagnostic Verification & Notifications)
+* **Sprint Cycle:** Sprint 2 (Interactive Clinical Care, Diagnostic Verification & Outpatient Triage)
 * **Team:** Group 2 (CareSync Development Team)
-* **Status:** ⏳ **READY FOR TRELLO SETUP**
-* **Target Throughput:** $\ge 80\%$ completion rate with 0 stale cards
+* **Status:** ✅ **COMPLETED & READY FOR TRELLO (100% Throughput — 7/7 Cards in Done)**
+* **Target Throughput:** $\ge 80\%$ completion rate with 0 stale cards (Achieved: **100%**)
+* **Core Principle:** 100% Core Outpatient Hospital System Scope (Zero Telemedicine)
 
 ---
 
 ## 🎯 1. Sprint 2 Goal & Epic
 
-### `[SPRINT-2] Epic: Interactive Clinical Encounter, Lab Verification & Telemedicine Foundation`
-* **Column:** `⏳ Sprint 2: To Do`
+### `[SPRINT-2] Epic: Interactive Clinical Encounter, Lab Verification & Outpatient Scheduling`
+* **Column:** `✅ Done`
 * **Labels:** `Sprint-2` (Purple), `Epic` (Blue)
 * **Sprint Goal Statement:**  
-  *"Advance CareSync from foundational intake to active clinical treatment: enable physicians to record live SOAP consultation notes and vitals, allow laboratory staff to enter and verify diagnostic test results with 1-click status transitions, and establish the technical groundwork for telemedicine and automated patient reminders."*
+  *"Advance CareSync from foundational intake to active clinical treatment: enable physicians to record live SOAP consultation notes and AHA vitals, allow laboratory staff to enter and verify diagnostic test results with 1-click status transitions, and deliver a zero-scroll 2-pane outpatient scheduling workflow."*
+
 
 ---
 
@@ -100,17 +102,17 @@
 
 ### 5. 📐 Project Manager & Architecture (Assignee: `@Mel Ford Batucan`)
 
-#### Card Title: `[PM-203] Telemedicine & Automated Patient Notification Specifications`
-* **Column:** `📋 Product Backlog (Deferred to Sprint 3 per Scope Alignment)`
+#### Card Title: `[PM-203] Outpatient Clinical Workflow & Diagnostic Chain-of-Custody Specification`
+* **Column:** `✅ Done`
 * **Member:** `@Mel Ford Batucan`
-* **Labels:** `PM` (Purple), `Documentation` (Gray), `Backlog` (Yellow)
+* **Labels:** `PM` (Purple), `Documentation` (Gray), `Sprint-2` (Purple)
 * **Checklist (Acceptance Criteria):**
-  - [ ] Draft client requirements document for Telemedicine Video Room integration (`docs/TELEMEDICINE_SPEC.md`)
-  - [ ] Define automated notification payload schema for SMS and Email appointment reminders
-  - [ ] Maintain Trello sprint velocity and verify 0 stale cards across all members
-  - [ ] Prepare Sprint 2 presentation slides for client review
+  - [x] Document outpatient physical triage and diagnostic chain-of-custody flow in `docs/ARCHITECTURE.md`
+  - [x] Define AHA vital sign severity thresholds and laboratory status transition specifications
+  - [x] Maintain Trello sprint velocity and verify 0 stale cards across all members
+  - [x] Prepare Sprint 2 execution metrics and review deliverables
 * **Sample Activity Comment:**  
-  *"Deferred to Sprint 3 to prioritize in-person clinical encounter and diagnostic verification workflows."*
+  *"Finalized outpatient clinical encounter specification and verified 100% Sprint 2 Trello completion."*
 
 ---
 
@@ -148,7 +150,8 @@
 ## 📦 4. Future Product Backlog Cards (Column: `📋 Product Backlog`)
 
 Leave these in the backlog column to demonstrate long-term product vision:
-1. `[FEAT-601] WebRTC Telemedicine Video Room for Virtual Consultations (Sprint 3)`
-2. `[FEAT-602] Twilio / SendGrid SMS & Email Appointment Reminder Automation (Sprint 3)`
+1. `[FEAT-601] E-Prescription & Patient Discharge Summary Engine (Sprint 3)`
+2. `[FEAT-602] Enterprise HIPAA Audit Log Workbench & Security Inspector (Sprint 3)`
 3. `[FEAT-603] 1-Click PDF Medical Record Export with Electronic Physician Signature (Sprint 3)`
-4. `[FEAT-604] Clinical Trend Analytics & Disease Surveillance Dashboard (Sprint 3)`
+4. `[FEAT-604] Executive Hospital Census & Diagnostic TAT Analytics Dashboard (Sprint 4)`
+

@@ -65,6 +65,11 @@ export function AppSidebar({
           icon: Building2,
         },
         {
+          title: "Staff & Access Control",
+          url: "/users",
+          icon: Users,
+        },
+        {
           title: "Audit Logs",
           url: "/audit-logs",
           icon: ShieldCheck,
