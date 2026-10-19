@@ -181,77 +181,75 @@ function PatientPortalContent() {
         </div>
       </div>
 
-      {/* 2. PATIENT IDENTITY & CLINICAL SAFETY BANNER CARD */}
-      <Card className="border-border bg-card shadow-xs rounded-xl overflow-hidden">
-        <CardContent className="p-4 sm:p-6">
+      {/* 2. PATIENT IDENTITY & CLINICAL SAFETY BANNER CARD (Deep Clinical Navy & Sapphire) */}
+      <Card className="bg-gradient-to-br from-slate-900 via-[#14223b] to-[#1d3154] text-white border border-slate-700/80 shadow-md rounded-xl relative overflow-hidden">
+        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <CardContent className="relative z-10 p-4 sm:p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3.5 sm:gap-4">
-              <Avatar className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl border border-border bg-muted text-foreground shrink-0 shadow-2xs">
-                <AvatarFallback className="text-sm sm:text-base font-bold bg-muted text-foreground">
+              <Avatar className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl border-2 border-blue-400/35 bg-blue-950/80 text-blue-100 shrink-0 shadow-sm">
+                <AvatarFallback className="text-sm sm:text-base font-bold bg-blue-950 text-blue-100">
                   {initials}
                 </AvatarFallback>
               </Avatar>
 
               <div className="space-y-1.5 min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
+                  <h2 className="text-lg sm:text-xl font-bold tracking-tight text-white">
                     {patient.fullName}
                   </h2>
                   <Badge
                     variant="outline"
-                    className="font-mono text-xs py-0.5 px-2.5 bg-background border-border text-foreground"
+                    className="font-mono text-xs py-0.5 px-2.5 bg-blue-500/20 border-blue-400/35 text-blue-200"
                   >
                     {patient.mrn}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className={`font-mono text-xs py-0.5 px-2.5 font-medium ${
-                      patient.status === 'Discharged'
-                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        : patient.status === 'In Consult'
-                        ? 'border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-400'
-                        : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                    }`}
+                    className="font-mono text-xs py-0.5 px-2.5 font-medium bg-sky-500/20 border-sky-400/35 text-sky-200"
                   >
                     {patient.status || 'Active'}
                   </Badge>
                   <Badge
                     variant="outline"
-                    className="font-mono text-xs py-0.5 px-2.5 border-border bg-muted/40 text-foreground"
+                    className="font-mono text-xs py-0.5 px-2.5 bg-white/10 border-white/20 text-slate-200"
                   >
                     Blood: {patient.bloodType || 'O+'}
                   </Badge>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300">
                   <span>
                     {patient.gender} • {patient.age} yrs • DOB: {patient.dateOfBirth || '1982-05-14'}
                   </span>
-                  <span className="hidden sm:inline text-border">|</span>
-                  <span className="inline-flex items-center gap-1 font-mono text-foreground">
-                    <Phone className="size-3 text-muted-foreground shrink-0" />
+                  <span className="hidden sm:inline text-slate-600">|</span>
+                  <span className="inline-flex items-center gap-1 font-mono text-slate-100">
+                    <Phone className="size-3 text-sky-400 shrink-0" />
                     <span>{patient.phone}</span>
                   </span>
-                  <span className="hidden sm:inline text-border">|</span>
-                  <span className="inline-flex items-center gap-1 text-foreground">
-                    <Stethoscope className="size-3 text-primary shrink-0" />
-                    <span>PCP: <strong>{patient.primaryPhysician || 'Dr. Sarah Chen, MD'}</strong></span>
+                  <span className="hidden sm:inline text-slate-600">|</span>
+                  <span className="inline-flex items-center gap-1 text-slate-100">
+                    <Stethoscope className="size-3 text-sky-400 shrink-0" />
+                    <span>
+                      PCP: <strong className="text-white">{patient.primaryPhysician || 'Dr. Sarah Chen, MD'}</strong>
+                    </span>
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Quick Summary Stat Pills on Desktop / Tablet */}
-            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 pt-2 md:pt-0 border-t md:border-t-0 border-border/60 shrink-0">
-              <div className="px-3 py-2 rounded-lg bg-muted/40 border border-border/60 text-left sm:text-center">
-                <div className="text-xs text-muted-foreground">Active Rx</div>
-                <div className="text-sm font-bold font-mono text-foreground">
+            {/* Frosted Glass Quick Stat Slots */}
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 pt-2 md:pt-0 border-t md:border-t-0 border-slate-700/70 shrink-0">
+              <div className="px-3.5 py-2 rounded-lg bg-white/[0.07] border border-white/15 backdrop-blur-xs text-left sm:text-center">
+                <div className="text-xs text-blue-200/80">Active Rx</div>
+                <div className="text-sm font-bold font-mono text-white">
                   {activeMedicationsCount} Prescriptions
                 </div>
               </div>
-              <div className="px-3 py-2 rounded-lg bg-muted/40 border border-border/60 text-left sm:text-center">
-                <div className="text-xs text-muted-foreground">Verified Labs</div>
-                <div className="text-sm font-bold font-mono text-foreground">
+              <div className="px-3.5 py-2 rounded-lg bg-white/[0.07] border border-white/15 backdrop-blur-xs text-left sm:text-center">
+                <div className="text-xs text-blue-200/80">Verified Labs</div>
+                <div className="text-sm font-bold font-mono text-white">
                   {verifiedLabsCount} Panels
                 </div>
               </div>
@@ -259,17 +257,17 @@ function PatientPortalContent() {
           </div>
 
           {/* Clinical Safety Sub-Bar: Allergies & Emergency Contact */}
-          <div className="mt-4 pt-3.5 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+          <div className="mt-4 pt-3.5 border-t border-slate-700/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
             <div className="flex flex-wrap items-center gap-2">
-              <ShieldAlert className="size-3.5 text-amber-500 shrink-0" />
-              <span className="text-muted-foreground font-medium">Documented Allergies:</span>
+              <ShieldAlert className="size-3.5 text-amber-400 shrink-0" />
+              <span className="text-slate-300 font-medium">Documented Allergies:</span>
               {patient.allergies && patient.allergies.length > 0 ? (
                 <div className="flex flex-wrap items-center gap-1.5">
                   {patient.allergies.map((allergy) => (
                     <Badge
                       key={allergy}
                       variant="outline"
-                      className="text-xs py-0.5 px-2.5 font-medium border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                      className="text-xs py-0.5 px-2.5 font-medium border-amber-400/40 bg-amber-500/20 text-amber-200"
                     >
                       {allergy}
                     </Badge>
@@ -278,17 +276,17 @@ function PatientPortalContent() {
               ) : (
                 <Badge
                   variant="outline"
-                  className="text-xs py-0.5 px-2.5 font-medium border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  className="text-xs py-0.5 px-2.5 font-medium border-sky-400/35 bg-sky-500/20 text-sky-200"
                 >
                   NKDA (No Known Drug Allergies)
                 </Badge>
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 text-muted-foreground">
-              <User className="size-3.5 text-primary shrink-0" />
+            <div className="flex flex-wrap items-center gap-1.5 text-slate-300">
+              <User className="size-3.5 text-sky-400 shrink-0" />
               <span>Emergency Contact:</span>
-              <strong className="font-medium text-foreground">
+              <strong className="font-medium text-white">
                 {patient.emergencyContact || 'Thomas Vance (Spouse) — +1 (555) 349-8209'}
               </strong>
             </div>
