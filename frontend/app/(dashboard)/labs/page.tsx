@@ -453,33 +453,79 @@ export default function LabsPage() {
             </div>
           </div>
 
-          {/* 1. Pipeline Stage Tabs */}
-          <Tabs
-            value={activeTab}
-            onValueChange={(val) => {
-              setActiveTab(val);
-              setCurrentPage(1);
-            }}
-            className="w-full"
-          >
-            <TabsList className="h-10 bg-muted/60 p-1 border border-border w-full justify-start overflow-x-auto">
-              <TabsTrigger value="ALL" className="text-xs sm:text-sm px-3.5 py-1.5 font-medium cursor-pointer">
-                All Orders ({orders.length})
-              </TabsTrigger>
-              <TabsTrigger value="AWAITING" className="text-xs sm:text-sm px-3.5 py-1.5 font-medium cursor-pointer">
-                Awaiting Specimen ({awaitingCount})
-              </TabsTrigger>
-              <TabsTrigger value="IN_LAB" className="text-xs sm:text-sm px-3.5 py-1.5 font-medium cursor-pointer">
-                In Lab Run ({inLabCount})
-              </TabsTrigger>
-              <TabsTrigger value="RESULTED" className="text-xs sm:text-sm px-3.5 py-1.5 font-medium cursor-pointer">
-                Needs Verification ({resultedCount})
-              </TabsTrigger>
-              <TabsTrigger value="COMPLETED" className="text-xs sm:text-sm px-3.5 py-1.5 font-medium cursor-pointer">
-                Completed ({completedCount})
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+          {/* 1. Pipeline Stage Navigation (Clean underline tabs, zero pill container) */}
+          <div className="flex items-center gap-2 sm:gap-6 border-b border-border overflow-x-auto pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('ALL');
+                setCurrentPage(1);
+              }}
+              className={`pb-2.5 text-xs sm:text-sm font-medium transition-colors cursor-pointer border-b-2 whitespace-nowrap shrink-0 ${
+                activeTab === 'ALL'
+                  ? 'border-primary text-foreground font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              All Orders <span className="ml-1 text-xs opacity-70">({orders.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('AWAITING');
+                setCurrentPage(1);
+              }}
+              className={`pb-2.5 text-xs sm:text-sm font-medium transition-colors cursor-pointer border-b-2 whitespace-nowrap shrink-0 ${
+                activeTab === 'AWAITING'
+                  ? 'border-primary text-foreground font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Awaiting Specimen <span className="ml-1 text-xs opacity-70">({awaitingCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('IN_LAB');
+                setCurrentPage(1);
+              }}
+              className={`pb-2.5 text-xs sm:text-sm font-medium transition-colors cursor-pointer border-b-2 whitespace-nowrap shrink-0 ${
+                activeTab === 'IN_LAB'
+                  ? 'border-primary text-foreground font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              In Lab Run <span className="ml-1 text-xs opacity-70">({inLabCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('RESULTED');
+                setCurrentPage(1);
+              }}
+              className={`pb-2.5 text-xs sm:text-sm font-medium transition-colors cursor-pointer border-b-2 whitespace-nowrap shrink-0 ${
+                activeTab === 'RESULTED'
+                  ? 'border-primary text-foreground font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Needs Verification <span className="ml-1 text-xs opacity-70">({resultedCount})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('COMPLETED');
+                setCurrentPage(1);
+              }}
+              className={`pb-2.5 text-xs sm:text-sm font-medium transition-colors cursor-pointer border-b-2 whitespace-nowrap shrink-0 ${
+                activeTab === 'COMPLETED'
+                  ? 'border-primary text-foreground font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Completed <span className="ml-1 text-xs opacity-70">({completedCount})</span>
+            </button>
+          </div>
 
           {/* 2. Secondary Filter Strip: Search + Priority Dropdown + Category Dropdown + Reset */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5 pt-1">
