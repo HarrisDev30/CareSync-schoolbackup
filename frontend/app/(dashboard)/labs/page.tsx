@@ -79,9 +79,9 @@ import { PanicCallModal } from './_components/panic-call-modal';
 export default function LabsPage() {
   const [orders, setOrders] = useState<LabOrder[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
-  const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Active modals
@@ -140,7 +140,7 @@ export default function LabsPage() {
     const res = await updateDiagnosticOrderStatus(order.id, 'COLLECTED');
     if (res.success && res.data) {
       setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: 'COLLECTED' } : o)));
-      showToast('success', `Specimen for order ${order.orderNumber} marked as collected and in lab.`);
+      showToast('success', `Specimen for order ${order.orderNumber} received in lab.`);
     } else {
       showToast('error', 'Failed to update collection status.');
     }
@@ -180,7 +180,7 @@ export default function LabsPage() {
     return { success: false, error: 'Failed to record physician review.' };
   };
 
-  // Metrics
+  // Metrics for Top KPI Strip
   const statAndUrgentCount = useMemo(
     () => orders.filter((o) => o.priority === 'STAT' || o.priority === 'URGENT').length,
     [orders],
@@ -194,9 +194,23 @@ export default function LabsPage() {
     [orders],
   );
 
-  const statCount = orders.filter((o) => o.priority === 'STAT').length;
-  const urgentCount = orders.filter((o) => o.priority === 'URGENT').length;
-  const routineCount = orders.filter((o) => o.priority === 'ROUTINE').length;
+  // Pipeline Stage Tab Counts
+  const awaitingCount = useMemo(
+    () => orders.filter((o) => o.status === 'ORDERED' || o.status === 'PENDING').length,
+    [orders],
+  );
+  const inLabCount = useMemo(
+    () => orders.filter((o) => o.status === 'PROCESSING' || o.status === 'IN_ANALYSIS' || o.status === 'COLLECTED').length,
+    [orders],
+  );
+  const resultedCount = useMemo(
+    () => orders.filter((o) => o.status === 'RESULTED').length,
+    [orders],
+  );
+  const completedCount = useMemo(
+    () => orders.filter((o) => o.status === 'VERIFIED' || o.status === 'REVIEWED' || o.status === 'COMPLETED').length,
+    [orders],
+  );
 
   // Filtered orders
   const filteredOrders = useMemo(() => {
@@ -212,31 +226,38 @@ export default function LabsPage() {
 
       if (!matchesSearch) return false;
 
-      if (priorityFilter !== 'ALL' && o.priority !== priorityFilter) return false;
-      if (categoryFilter !== 'ALL' && o.testCategory !== categoryFilter) return false;
-
-      if (statusFilter !== 'ALL') {
-        if (statusFilter === 'PENDING' && o.status !== 'ORDERED' && o.status !== 'PENDING') return false;
-        if (statusFilter === 'IN_LAB' && o.status !== 'COLLECTED' && o.status !== 'PROCESSING' && o.status !== 'IN_ANALYSIS') return false;
-        if (statusFilter === 'RESULTED' && o.status !== 'RESULTED') return false;
-        if (statusFilter === 'VERIFIED' && o.status !== 'VERIFIED' && o.status !== 'REVIEWED' && o.status !== 'COMPLETED') return false;
+      // Stage Tabs
+      if (activeTab === 'AWAITING') {
+        if (o.status !== 'ORDERED' && o.status !== 'PENDING') return false;
+      } else if (activeTab === 'IN_LAB') {
+        if (o.status !== 'COLLECTED' && o.status !== 'PROCESSING' && o.status !== 'IN_ANALYSIS') return false;
+      } else if (activeTab === 'RESULTED') {
+        if (o.status !== 'RESULTED') return false;
+      } else if (activeTab === 'COMPLETED') {
+        if (o.status !== 'VERIFIED' && o.status !== 'REVIEWED' && o.status !== 'COMPLETED') return false;
       }
+
+      // Priority Filter
+      if (priorityFilter !== 'ALL' && o.priority !== priorityFilter) return false;
+
+      // Department Category Filter
+      if (categoryFilter !== 'ALL' && o.testCategory !== categoryFilter) return false;
 
       return true;
     });
-  }, [orders, searchQuery, priorityFilter, categoryFilter, statusFilter]);
+  }, [orders, searchQuery, activeTab, priorityFilter, categoryFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
   const startIndex = (currentPage - 1) * pageSize;
   const visibleOrders = filteredOrders.slice(startIndex, startIndex + pageSize);
 
-  const hasActiveFilters = searchQuery.trim() !== '' || priorityFilter !== 'ALL' || categoryFilter !== 'ALL' || statusFilter !== 'ALL';
+  const hasActiveFilters = searchQuery.trim() !== '' || priorityFilter !== 'ALL' || categoryFilter !== 'ALL' || activeTab !== 'ALL';
 
   const resetFilters = () => {
     setSearchQuery('');
+    setActiveTab('ALL');
     setPriorityFilter('ALL');
     setCategoryFilter('ALL');
-    setStatusFilter('ALL');
     setCurrentPage(1);
   };
 
@@ -246,7 +267,7 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
+            className="border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-[10px] py-0 px-1.5 gap-1 whitespace-nowrap shrink-0 shadow-2xs"
           >
             <span className="size-1.5 rounded-full bg-red-500 animate-ping shrink-0" />
             <span>STAT</span>
@@ -256,139 +277,58 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
+            className="border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-semibold text-[10px] py-0 px-1.5 gap-1 whitespace-nowrap shrink-0"
           >
-            <Clock className="size-3 text-amber-600 dark:text-amber-400" />
+            <Clock className="size-2.5 text-amber-600 dark:text-amber-400" />
             <span>Urgent</span>
           </Badge>
         );
       case 'ROUTINE':
-        return (
-          <Badge
-            variant="outline"
-            className="border-border bg-muted/40 text-muted-foreground font-medium text-xs py-1 px-2.5 whitespace-nowrap shrink-0"
-          >
-            Routine
-          </Badge>
-        );
       default:
         return null;
     }
-  };
-
-  const renderSpecimenTubeBadge = (tube?: string, testCategory?: string, testName?: string) => {
-    let tubeName = tube;
-    if (!tubeName) {
-      if (testCategory?.includes('Hematology') || testName?.includes('CBC')) {
-        tubeName = 'Lavender EDTA (Hematology / CBC)';
-      } else if (testCategory?.includes('Coagulation') || testName?.includes('PT')) {
-        tubeName = 'Light Blue Citrate (Coagulation / PT-INR)';
-      } else if (testCategory?.includes('Biomarker') || testName?.includes('Troponin')) {
-        tubeName = 'Green Heparin (STAT Biomarkers)';
-      } else if (testCategory?.includes('Urinalysis') || testName?.includes('Urine')) {
-        tubeName = 'Sterile Container (Urinalysis / Culture)';
-      } else {
-        tubeName = 'Gold SST (Clinical Chemistry / Lipids)';
-      }
-    }
-
-    if (tubeName.includes('Lavender')) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/30 whitespace-nowrap shrink-0">
-          <span className="size-2 rounded-full bg-purple-600 shrink-0" />
-          <span>Lavender EDTA</span>
-        </span>
-      );
-    }
-    if (tubeName.includes('Gold')) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 whitespace-nowrap shrink-0">
-          <span className="size-2 rounded-full bg-amber-500 shrink-0" />
-          <span>Gold SST</span>
-        </span>
-      );
-    }
-    if (tubeName.includes('Light Blue')) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/30 whitespace-nowrap shrink-0">
-          <span className="size-2 rounded-full bg-sky-500 shrink-0" />
-          <span>Citrate Blue</span>
-        </span>
-      );
-    }
-    if (tubeName.includes('Green')) {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 whitespace-nowrap shrink-0">
-          <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
-          <span>Heparin Green</span>
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-muted text-foreground border border-border whitespace-nowrap shrink-0">
-        <span className="size-2 rounded-full bg-muted-foreground shrink-0" />
-        <span>Sterile Cup</span>
-      </span>
-    );
   };
 
   const renderStatusBadge = (status: DiagnosticStatus) => {
     switch (status) {
       case 'COMPLETED':
       case 'REVIEWED':
-        return (
-          <Badge
-            variant="outline"
-            className="border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-semibold text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
-          >
-            <Check className="size-3" />
-            <span>Reviewed</span>
-          </Badge>
-        );
       case 'VERIFIED':
         return (
           <Badge
             variant="outline"
-            className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
+            className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-medium text-xs py-0.5 px-2 gap-1.5 whitespace-nowrap shrink-0"
           >
-            <CheckCircle2 className="size-3" />
-            <span>Verified</span>
+            <Check className="size-3" />
+            <span>Completed</span>
           </Badge>
         );
       case 'RESULTED':
         return (
           <Badge
             variant="outline"
-            className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium text-xs py-1 px-2.5 whitespace-nowrap shrink-0"
+            className="border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300 font-medium text-xs py-0.5 px-2 whitespace-nowrap shrink-0"
           >
-            Resulted
+            Results Entered
           </Badge>
         );
       case 'IN_ANALYSIS':
       case 'PROCESSING':
-        return (
-          <Badge
-            variant="outline"
-            className="border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 font-medium text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
-          >
-            <Activity className="size-3 animate-spin text-sky-600 dark:text-sky-400" />
-            <span>In Lab Run</span>
-          </Badge>
-        );
       case 'COLLECTED':
         return (
           <Badge
             variant="outline"
-            className="border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium text-xs py-1 px-2.5 whitespace-nowrap shrink-0"
+            className="border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300 font-medium text-xs py-0.5 px-2 gap-1.5 whitespace-nowrap shrink-0"
           >
-            Specimen In Lab
+            <Activity className="size-3 animate-spin text-sky-600 dark:text-sky-400" />
+            <span>In Lab Run</span>
           </Badge>
         );
       case 'REJECTED':
         return (
           <Badge
             variant="outline"
-            className="border-destructive/30 bg-destructive/10 text-destructive font-medium text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0"
+            className="border-destructive/30 bg-destructive/10 text-destructive font-medium text-xs py-0.5 px-2 gap-1.5 whitespace-nowrap shrink-0"
           >
             <AlertCircle className="size-3 text-destructive" />
             <span>Specimen Rejected</span>
@@ -400,9 +340,9 @@ export default function LabsPage() {
         return (
           <Badge
             variant="outline"
-            className="border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium text-[11px] py-0.5 px-2 whitespace-nowrap shrink-0"
+            className="border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300 font-medium text-xs py-0.5 px-2 whitespace-nowrap shrink-0"
           >
-            Requisitioned
+            Awaiting Specimen
           </Badge>
         );
     }
@@ -498,7 +438,7 @@ export default function LabsPage() {
 
       {/* 3. DIAGNOSTIC ORDERS WORKLIST CARD */}
       <Card className="shadow-xs border-border bg-card">
-        <CardHeader className="py-5 px-6">
+        <CardHeader className="py-5 px-6 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <CardTitle className="text-lg font-semibold tracking-tight text-foreground flex items-center gap-2.5">
@@ -508,13 +448,41 @@ export default function LabsPage() {
                 </Badge>
               </CardTitle>
               <CardDescription className="text-sm text-muted-foreground mt-1">
-                Laboratory orders, priority specimen tracking, and critical flags.
+                Laboratory specimen pipeline, clinical analysis bench, and physician sign-off.
               </CardDescription>
             </div>
           </div>
 
-          {/* Unified Command Toolbar: Search + Priority Tabs + Category & Status Selects */}
-          <div className="pt-3.5 flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+          {/* 1. Pipeline Stage Tabs */}
+          <Tabs
+            value={activeTab}
+            onValueChange={(val) => {
+              setActiveTab(val);
+              setCurrentPage(1);
+            }}
+            className="w-full"
+          >
+            <TabsList className="h-10 bg-muted/60 p-1 border border-border w-full justify-start overflow-x-auto">
+              <TabsTrigger value="ALL" className="text-xs sm:text-sm px-3.5 py-1.5 font-medium cursor-pointer">
+                All Orders ({orders.length})
+              </TabsTrigger>
+              <TabsTrigger value="AWAITING" className="text-xs sm:text-sm px-3.5 py-1.5 font-medium cursor-pointer">
+                Awaiting Specimen ({awaitingCount})
+              </TabsTrigger>
+              <TabsTrigger value="IN_LAB" className="text-xs sm:text-sm px-3.5 py-1.5 font-medium cursor-pointer">
+                In Lab Run ({inLabCount})
+              </TabsTrigger>
+              <TabsTrigger value="RESULTED" className="text-xs sm:text-sm px-3.5 py-1.5 font-medium cursor-pointer">
+                Needs Verification ({resultedCount})
+              </TabsTrigger>
+              <TabsTrigger value="COMPLETED" className="text-xs sm:text-sm px-3.5 py-1.5 font-medium cursor-pointer">
+                Completed ({completedCount})
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* 2. Secondary Filter Strip: Search + Priority Dropdown + Category Dropdown + Reset */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5 pt-1">
             <div className="relative flex-1">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -524,7 +492,7 @@ export default function LabsPage() {
                   setSearchQuery(e.target.value);
                   setCurrentPage(1);
                 }}
-                placeholder="Filter orders by order #, patient, MRN, panel, or clinician..."
+                placeholder="Search order #, patient name, MRN, test, or clinician..."
                 className="pl-10 pr-16 h-10 text-sm border-border bg-background shadow-none focus-visible:ring-1 focus-visible:ring-ring"
               />
               <button
@@ -537,33 +505,31 @@ export default function LabsPage() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
-              {/* Segmented Priority Tabs (Exact match to Consultation and Patients pages) */}
-              <Tabs
-                value={priorityFilter}
-                onValueChange={(val) => {
-                  setPriorityFilter(val);
-                  setCurrentPage(1);
-                }}
-                className="w-auto shrink-0"
-              >
-                <TabsList className="h-10 bg-muted p-1 border border-border">
-                  <TabsTrigger value="ALL" className="text-sm px-3.5 py-1.5 font-medium">
-                    All ({orders.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="STAT" className="text-sm px-3.5 py-1.5 font-medium">
-                    STAT ({statCount})
-                  </TabsTrigger>
-                  <TabsTrigger value="URGENT" className="text-sm px-3.5 py-1.5 font-medium">
-                    Urgent ({urgentCount})
-                  </TabsTrigger>
-                  <TabsTrigger value="ROUTINE" className="text-sm px-3.5 py-1.5 font-medium">
-                    Routine ({routineCount})
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+              {/* Priority Select */}
+              <div className="w-full sm:w-40 shrink-0">
+                <Select
+                  value={priorityFilter}
+                  onValueChange={(val) => {
+                    setPriorityFilter(val);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-10 text-sm border-border bg-background shadow-none">
+                    <SelectValue placeholder="All Priorities" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover dark:bg-card border-border shadow-2xl z-50">
+                    <SelectGroup>
+                      <SelectItem value="ALL" className="text-sm">All Priorities</SelectItem>
+                      <SelectItem value="STAT" className="text-sm">STAT Only</SelectItem>
+                      <SelectItem value="URGENT" className="text-sm">Urgent Only</SelectItem>
+                      <SelectItem value="ROUTINE" className="text-sm">Routine Only</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
 
-              {/* Category Filter */}
+              {/* Department Category Select */}
               <div className="w-full sm:w-48 shrink-0">
                 <Select
                   value={categoryFilter}
@@ -573,41 +539,17 @@ export default function LabsPage() {
                   }}
                 >
                   <SelectTrigger className="h-10 text-sm border-border bg-background shadow-none">
-                    <SelectValue placeholder="All Categories" />
+                    <SelectValue placeholder="All Departments" />
                   </SelectTrigger>
                   <SelectContent className="bg-popover dark:bg-card border-border shadow-2xl z-50">
                     <SelectGroup>
-                      <SelectItem value="ALL" className="text-sm">All Categories</SelectItem>
+                      <SelectItem value="ALL" className="text-sm">All Departments</SelectItem>
                       <SelectItem value="General Chemistry" className="text-sm">General Chemistry</SelectItem>
                       <SelectItem value="Hematology" className="text-sm">Hematology</SelectItem>
                       <SelectItem value="Cardiovascular Chemistry" className="text-sm">Cardiovascular Chemistry</SelectItem>
                       <SelectItem value="Cardiology Biomarkers" className="text-sm">Cardiology Biomarkers</SelectItem>
                       <SelectItem value="Renal & Urology" className="text-sm">Renal & Urology</SelectItem>
                       <SelectItem value="Radiology / Imaging" className="text-sm">Radiology / Imaging</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Status Filter */}
-              <div className="w-full sm:w-44 shrink-0">
-                <Select
-                  value={statusFilter}
-                  onValueChange={(val) => {
-                    setStatusFilter(val);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <SelectTrigger className="h-10 text-sm border-border bg-background shadow-none">
-                    <SelectValue placeholder="All Statuses" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover dark:bg-card border-border shadow-2xl z-50">
-                    <SelectGroup>
-                      <SelectItem value="ALL" className="text-sm">All Statuses</SelectItem>
-                      <SelectItem value="PENDING" className="text-sm">Requisitioned</SelectItem>
-                      <SelectItem value="IN_LAB" className="text-sm">In Laboratory Run</SelectItem>
-                      <SelectItem value="RESULTED" className="text-sm">Resulted</SelectItem>
-                      <SelectItem value="VERIFIED" className="text-sm">Verified & Reviewed</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -628,254 +570,265 @@ export default function LabsPage() {
           </div>
         </CardHeader>
 
-        {/* 100% NATIVE SHADCN DATA TABLE */}
+        {/* 5-COLUMN RESPONSIVE WORKLIST (NO HORIZONTAL SLIDER) */}
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b border-border bg-muted/40">
-                <TableHead className="w-[150px] pl-6 font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Order #</TableHead>
-                <TableHead className="w-[230px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Patient & MRN</TableHead>
-                <TableHead className="min-w-[240px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5">Diagnostic Panel</TableHead>
-                <TableHead className="w-[110px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Priority</TableHead>
-                <TableHead className="w-[160px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Status</TableHead>
-                <TableHead className="w-[200px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Requisitioned By</TableHead>
-                <TableHead className="text-right pr-6 min-w-[260px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-20 text-center text-sm text-muted-foreground">
-                    <Loader2 className="size-5 animate-spin mx-auto mb-2 text-primary" />
-                    Synchronizing diagnostic orders...
-                  </TableCell>
+          <div className="w-full overflow-x-auto">
+            <Table className="w-full">
+              <TableHeader>
+                <TableRow className="border-b border-border bg-muted/40">
+                  <TableHead className="w-[160px] pl-6 font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">
+                    Order & Urgency
+                  </TableHead>
+                  <TableHead className="w-[200px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">
+                    Patient
+                  </TableHead>
+                  <TableHead className="font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5">
+                    Diagnostic Test & Clinician
+                  </TableHead>
+                  <TableHead className="w-[150px] font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">
+                    Status
+                  </TableHead>
+                  <TableHead className="w-[200px] pr-6 text-right font-semibold text-xs uppercase tracking-wider text-muted-foreground py-3.5 whitespace-nowrap">
+                    Actions
+                  </TableHead>
                 </TableRow>
-              ) : visibleOrders.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-20 text-center text-sm text-muted-foreground">
-                    <Beaker className="size-8 mx-auto mb-2 text-muted-foreground opacity-40" />
-                    No diagnostic orders found matching the filter criteria.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                visibleOrders.map((order) => {
-                  const initials = order.patientName
-                    ? order.patientName
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')
-                        .slice(0, 2)
-                    : 'PT';
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-20 text-center text-sm text-muted-foreground">
+                      <Loader2 className="size-5 animate-spin mx-auto mb-2 text-primary" />
+                      Synchronizing diagnostic orders...
+                    </TableCell>
+                  </TableRow>
+                ) : visibleOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="py-20 text-center text-sm text-muted-foreground">
+                      <Beaker className="size-8 mx-auto mb-2 text-muted-foreground opacity-40" />
+                      No diagnostic orders found matching the filter criteria.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  visibleOrders.map((order) => {
+                    const initials = order.patientName
+                      ? order.patientName
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .slice(0, 2)
+                      : 'PT';
 
-                  const isPendingCollection = order.status === 'ORDERED' || order.status === 'PENDING';
-                  const isAwaitingResults = order.status === 'COLLECTED' || order.status === 'PROCESSING' || order.status === 'IN_ANALYSIS';
-                  const isResulted = order.status === 'RESULTED';
-                  const isCompleted = order.status === 'VERIFIED' || order.status === 'REVIEWED' || order.status === 'COMPLETED';
-                  const hasPanicValue = order.results?.some((r) => r.isPanicValue || (r as any).isPanic || (r as any).flag === 'CRITICAL');
+                    const isPendingCollection = order.status === 'ORDERED' || order.status === 'PENDING';
+                    const isAwaitingResults = order.status === 'COLLECTED' || order.status === 'PROCESSING' || order.status === 'IN_ANALYSIS';
+                    const isResulted = order.status === 'RESULTED';
+                    const hasPanicValue = order.results?.some((r) => r.isPanicValue || r.isPanic || r.flag === 'CRITICAL');
 
-                  return (
-                    <TableRow
-                      key={order.id}
-                      onClick={() => setSelectedOrderForFindings(order)}
-                      className="cursor-pointer hover:bg-muted/50 transition-colors group border-b border-border/70"
-                      title="Click to view diagnostic order details"
-                    >
-                      {/* Column 1: Order # */}
-                      <TableCell className="pl-6 py-4 align-middle whitespace-nowrap">
-                        <div className="font-mono font-medium text-xs text-foreground bg-muted/80 px-2.5 py-1 rounded border border-border inline-block whitespace-nowrap shadow-2xs">
-                          {order.orderNumber}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1 whitespace-nowrap">
-                          {new Date(order.requestedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </div>
-                      </TableCell>
-
-                      {/* Column 2: Patient Identity */}
-                      <TableCell className="py-4 align-middle">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9 border border-border text-xs shrink-0">
-                            <AvatarFallback className="text-xs font-semibold text-muted-foreground bg-muted">
-                              {initials}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <div className="font-semibold text-sm text-foreground leading-snug truncate">
-                              {order.patientName}
+                    return (
+                      <TableRow
+                        key={order.id}
+                        onClick={() => setSelectedOrderForFindings(order)}
+                        className="cursor-pointer hover:bg-muted/50 transition-colors group border-b border-border/70"
+                        title="Click to view diagnostic order details"
+                      >
+                        {/* Column 1: Order & Urgency */}
+                        <TableCell className="pl-6 py-3.5 align-middle">
+                          <div className="flex flex-col gap-1 items-start">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-mono font-medium text-xs text-foreground bg-muted/80 px-2 py-0.5 rounded border border-border">
+                                {order.orderNumber}
+                              </span>
+                              {renderPriorityBadge(order.priority)}
                             </div>
-                            <div className="font-mono text-xs text-muted-foreground mt-0.5 whitespace-nowrap">
-                              {order.mrn}
+                            <span className="text-[11px] text-muted-foreground">
+                              {new Date(order.requestedAt).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        {/* Column 2: Patient Identity */}
+                        <TableCell className="py-3.5 align-middle">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <Avatar className="h-8 w-8 border border-border text-xs shrink-0">
+                              <AvatarFallback className="text-[11px] font-semibold text-muted-foreground bg-muted">
+                                {initials}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-sm text-foreground truncate">
+                                {order.patientName}
+                              </div>
+                              <div className="font-mono text-[11px] text-muted-foreground">
+                                {order.mrn}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </TableCell>
+                        </TableCell>
 
-                      {/* Column 3: Diagnostic Panel & Specimen Container Tube */}
-                      <TableCell className="py-4 align-middle">
-                        <div className="font-semibold text-sm text-foreground leading-snug">
-                          {order.testName}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {order.testCategory}
-                        </div>
-                        <div className="pt-1.5 flex items-center">
-                          {renderSpecimenTubeBadge(order.specimenTube, order.testCategory, order.testName)}
-                        </div>
-                      </TableCell>
+                        {/* Column 3: Diagnostic Test & Clinician (Zero Tube Badges) */}
+                        <TableCell className="py-3.5 align-middle">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm text-foreground leading-snug">
+                              {order.testName}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5 flex-wrap">
+                              <span>{order.testCategory}</span>
+                              <span>•</span>
+                              <span className="inline-flex items-center gap-1 text-foreground/80">
+                                <Stethoscope className="w-3 h-3 text-muted-foreground shrink-0" />
+                                {order.requestedBy}
+                              </span>
+                            </div>
+                          </div>
+                        </TableCell>
 
-                      {/* Column 4: Priority */}
-                      <TableCell className="py-4 align-middle whitespace-nowrap">{renderPriorityBadge(order.priority)}</TableCell>
-
-                      {/* Column 5: Status */}
-                      <TableCell className="py-4 align-middle whitespace-nowrap">{renderStatusBadge(order.status)}</TableCell>
-
-                      {/* Column 6: Requisitioned By */}
-                      <TableCell className="py-4 align-middle whitespace-nowrap">
-                        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                          <Stethoscope className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                          <span>{order.requestedBy}</span>
-                        </div>
-                      </TableCell>
-
-                      {/* Column 7: Actions */}
-                      <TableCell className="pr-6 py-4 align-middle text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2 shrink-0 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                          {/* Panic Alert Call Badge or Button */}
-                          {hasPanicValue && (
-                            order.panicCallLog ? (
+                        {/* Column 4: Status & Critical Alert */}
+                        <TableCell className="py-3.5 align-middle">
+                          <div className="flex flex-col gap-1 items-start">
+                            {renderStatusBadge(order.status)}
+                            {hasPanicValue && (
                               <Badge
                                 variant="outline"
-                                className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold text-xs py-1 px-2.5 gap-1.5 whitespace-nowrap shrink-0 shadow-2xs"
-                                title={`Verbal read-back logged by ${order.panicCallLog.callerName} to ${order.panicCallLog.calledTo}`}
+                                className="border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-[10px] py-0.5 px-1.5 gap-1 whitespace-nowrap shrink-0 animate-pulse"
                               >
-                                <PhoneCall className="size-3 text-emerald-600 dark:text-emerald-400" />
-                                <span>MD Notified</span>
+                                <AlertTriangle className="size-2.5 text-red-600 dark:text-red-400 shrink-0" />
+                                <span>Critical Panic</span>
                               </Badge>
-                            ) : (
-                              <Button
-                                size="sm"
-                                onClick={() => setOrderForPanicCall(order)}
-                                className="text-xs h-8 px-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold shadow-xs animate-pulse cursor-pointer gap-1.5 whitespace-nowrap shrink-0"
-                                title="CLIA Critical Value: Attending Physician Read-Back Call Mandatory"
-                              >
-                                <PhoneCall className="size-3.5" />
-                                <span>Log Call</span>
-                              </Button>
-                            )
-                          )}
+                            )}
+                          </div>
+                        </TableCell>
 
-                          {order.status === 'REJECTED' ? (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setSelectedOrderForFindings(order)}
-                                className="text-xs text-destructive hover:bg-destructive/10 h-8 px-2.5 cursor-pointer font-medium border-destructive/30 whitespace-nowrap"
-                                title={order.rejectionReason}
-                              >
-                                <AlertCircle className="size-3.5 mr-1" />
-                                <span>View Rejection</span>
-                              </Button>
-                              {order.recollectionRequired && !order.recollectionRequisitionId && (
-                                <Button
+                        {/* Column 5: Clear Actions */}
+                        <TableCell className="pr-6 py-3.5 align-middle text-right">
+                          <div className="flex items-center justify-end gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            {/* Panic Call Log Badge or Action */}
+                            {hasPanicValue && (
+                              order.panicCallLog ? (
+                                <Badge
                                   variant="outline"
-                                  size="sm"
-                                  onClick={async () => {
-                                    const res = await triggerRecollectionRequisition(order.id);
-                                    if (res.success && res.data) {
-                                      setOrders((prev) => [res.data!, ...prev.map((o) => (o.id === order.id ? { ...o, recollectionRequisitionId: res.data!.id } : o))]);
-                                      showToast('success', `Recollection requisition ${res.data.orderNumber} initiated for ${order.patientName}.`);
-                                    } else {
-                                      showToast('error', res.error || 'Failed to trigger recollection.');
-                                    }
-                                  }}
-                                  className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 border-amber-500/30 h-8 px-2.5 cursor-pointer font-medium whitespace-nowrap"
-                                  title="Order replacement tube specimen recollection"
+                                  className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] py-1 px-2 gap-1 whitespace-nowrap shrink-0 shadow-2xs"
+                                  title={`Verbal read-back logged by ${order.panicCallLog.callerName} to ${order.panicCallLog.calledTo}`}
                                 >
-                                  <RotateCcw className="size-3.5 mr-1" />
-                                  <span>Recollect</span>
-                                </Button>
-                              )}
-                              {order.recollectionRequisitionId && (
-                                <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground border-border whitespace-nowrap">
-                                  Recollection Reordered
+                                  <PhoneCall className="size-3 text-emerald-600 dark:text-emerald-400" />
+                                  <span>MD Notified</span>
                                 </Badge>
-                              )}
-                            </div>
-                          ) : isPendingCollection ? (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleMarkCollected(order)}
-                                className="text-xs h-8 px-3 border-border hover:bg-muted font-medium cursor-pointer whitespace-nowrap"
-                              >
-                                <FlaskConical className="size-3.5 mr-1.5 text-purple-500" />
-                                <span>Collect Specimen</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setOrderToReject(order)}
-                                className="text-xs h-8 px-2.5 text-destructive hover:bg-destructive/10 border-destructive/25 font-medium cursor-pointer gap-1 whitespace-nowrap"
-                                title="Reject Specimen (CLIA Exception)"
-                              >
-                                <XCircle className="size-3.5" />
-                                <span>Reject</span>
-                              </Button>
-                            </div>
-                          ) : isAwaitingResults ? (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Button
-                                size="sm"
-                                onClick={() => setSelectedOrderForEntry(order)}
-                                className="text-xs h-8 px-3 gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-medium whitespace-nowrap shadow-2xs"
-                              >
-                                <Plus className="size-3.5" />
-                                <span>Input Findings</span>
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setOrderToReject(order)}
-                                className="text-xs h-8 px-2.5 text-destructive hover:bg-destructive/10 border-destructive/25 font-medium cursor-pointer gap-1 whitespace-nowrap"
-                                title="Reject Specimen (CLIA Exception)"
-                              >
-                                <XCircle className="size-3.5" />
-                                <span>Reject</span>
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setSelectedOrderForFindings(order)}
-                                className="text-xs text-foreground hover:bg-muted h-8 px-3 cursor-pointer font-medium border-border whitespace-nowrap"
-                              >
-                                <Eye className="size-3.5 mr-1.5 text-muted-foreground" />
-                                <span>{isResulted ? 'Verify & Sign' : 'View Findings'}</span>
-                              </Button>
-                              {order.results && order.results.length > 0 && (
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  onClick={() => setOrderForPanicCall(order)}
+                                  className="text-xs h-8 px-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold shadow-xs animate-pulse cursor-pointer gap-1 whitespace-nowrap shrink-0"
+                                  title="CLIA Critical Value: Attending Physician Read-Back Call Mandatory"
+                                >
+                                  <PhoneCall className="size-3.5" />
+                                  <span>Call MD</span>
+                                </Button>
+                              )
+                            )}
+
+                            {order.status === 'REJECTED' ? (
+                              <div className="flex items-center gap-1.5 shrink-0">
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setOrderToExport(order)}
-                                  className="h-8 px-2 text-xs border-border hover:bg-muted font-medium cursor-pointer shrink-0"
-                                  title="Export Certified Official PDF Laboratory Report"
+                                  onClick={() => setSelectedOrderForFindings(order)}
+                                  className="text-xs text-destructive hover:bg-destructive/10 h-8 px-2.5 cursor-pointer font-medium border-destructive/30 whitespace-nowrap"
+                                  title={order.rejectionReason}
                                 >
-                                  <Printer className="size-3.5 text-muted-foreground" />
+                                  <AlertCircle className="size-3.5 mr-1" />
+                                  <span>Rejection</span>
                                 </Button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                                {order.recollectionRequired && !order.recollectionRequisitionId && (
+                                  <Button
+                                    size="sm"
+                                    onClick={async () => {
+                                      const res = await triggerRecollectionRequisition(order.id);
+                                      if (res.success && res.data) {
+                                        setOrders((prev) => [res.data!, ...prev.map((o) => (o.id === order.id ? { ...o, recollectionRequisitionId: res.data!.id } : o))]);
+                                        showToast('success', `Recollection requisition ${res.data.orderNumber} initiated for ${order.patientName}.`);
+                                      } else {
+                                        showToast('error', res.error || 'Failed to trigger recollection.');
+                                      }
+                                    }}
+                                    className="text-xs bg-amber-600 hover:bg-amber-700 text-white h-8 px-2.5 cursor-pointer font-medium whitespace-nowrap"
+                                    title="Order replacement specimen recollection"
+                                  >
+                                    <RotateCcw className="size-3.5 mr-1" />
+                                    <span>Recollect</span>
+                                  </Button>
+                                )}
+                              </div>
+                            ) : isPendingCollection ? (
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleMarkCollected(order)}
+                                  className="text-xs h-8 px-3 bg-primary text-primary-foreground hover:bg-primary/90 font-medium cursor-pointer whitespace-nowrap shadow-2xs"
+                                >
+                                  <FlaskConical className="size-3.5 mr-1.5" />
+                                  <span>Receive Specimen</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setOrderToReject(order)}
+                                  className="text-xs h-8 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive font-medium cursor-pointer whitespace-nowrap"
+                                  title="Reject Specimen (CLIA Exception)"
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            ) : isAwaitingResults ? (
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <Button
+                                  size="sm"
+                                  onClick={() => setSelectedOrderForEntry(order)}
+                                  className="text-xs h-8 px-3 gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-medium whitespace-nowrap shadow-2xs"
+                                >
+                                  <Plus className="size-3.5" />
+                                  <span>Enter Results</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setOrderToReject(order)}
+                                  className="text-xs h-8 px-2 text-destructive hover:bg-destructive/10 hover:text-destructive font-medium cursor-pointer whitespace-nowrap"
+                                  title="Reject Specimen (CLIA Exception)"
+                                >
+                                  Reject
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSelectedOrderForFindings(order)}
+                                  className="text-xs text-foreground hover:bg-muted h-8 px-2.5 cursor-pointer font-medium border-border whitespace-nowrap"
+                                >
+                                  <Eye className="size-3.5 mr-1 text-muted-foreground" />
+                                  <span>{isResulted ? 'Verify & Sign' : 'View'}</span>
+                                </Button>
+                                {order.results && order.results.length > 0 && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setOrderToExport(order)}
+                                    className="h-8 w-8 p-0 border-border hover:bg-muted font-medium cursor-pointer shrink-0"
+                                    title="Export Certified Official PDF Laboratory Report"
+                                  >
+                                    <Printer className="size-3.5 text-muted-foreground" />
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
           {/* Pagination Footer */}
           <div className="px-5 py-3 bg-muted/20 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
