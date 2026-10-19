@@ -101,6 +101,8 @@ export default function DashboardLayout({
       if (pathname === '/' || pathname === '/analytics' || pathname === '/audit-logs' || pathname === '/appointments' || pathname === '/patient-portal') {
         router.push('/labs');
       }
+    } else if (staff.role === 'TRIAGE_NURSE') {
+      router.push('/triage');
     } else if (staff.role === 'RECEPTIONIST') {
       if (pathname === '/analytics' || pathname === '/audit-logs' || pathname === '/patient-portal') {
         router.push('/');
@@ -117,6 +119,9 @@ export default function DashboardLayout({
     if (currentStaff.role === 'PHYSICIAN') {
       return { title: 'CareSync Clinical', href: '/patients' };
     }
+    if (currentStaff.role === 'TRIAGE_NURSE') {
+      return { title: 'CareSync Triage Station', href: '/triage' };
+    }
     if (currentStaff.role === 'LABORATORY_USER') {
       return { title: 'CareSync Laboratory', href: '/labs' };
     }
@@ -131,6 +136,7 @@ function DynamicBreadcrumbPage({ pathname }: { pathname: string }) {
   const tab = searchParams.get('tab') || 'overview';
 
   const getPageTitle = () => {
+    if (pathname === '/triage') return 'Triage Vitals Intake Station';
     if (pathname === '/patient-portal') {
       if (tab === 'appointments') return 'My Appointments';
       if (tab === 'labs') return 'Diagnostic Results';

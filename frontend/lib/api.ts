@@ -20,6 +20,8 @@ import {
   RecordVitalSignsInput,
   PatientMedication,
   PrescriptionRefillRequest,
+  SpecimenTubeType,
+  PanicCallLog,
   PatientStatus,
   CreatePrescriptionInput,
   DischargeSummary,
@@ -43,7 +45,14 @@ export const STAFF_PRESETS: StaffUser[] = [
     email: 'maria.santos@caresync.org',
     fullName: 'Maria Santos',
     role: 'RECEPTIONIST',
-    department: 'Reception & Triage Desk',
+    department: 'Reception & Admissions Desk',
+  },
+  {
+    id: 'u-6',
+    email: 'chloe.bennett@caresync.org',
+    fullName: 'Nurse Chloe Bennett, RN',
+    role: 'TRIAGE_NURSE',
+    department: 'Outpatient Triage & Emergency Intake',
   },
   {
     id: 'u-1',
@@ -340,6 +349,7 @@ const INITIAL_LABS: LabOrder[] = [
     status: 'VERIFIED',
     requestedBy: 'Dr. Sarah Chen, MD',
     requestedAt: '2026-09-13T14:20:00Z',
+    specimenTube: 'Gold SST (Clinical Chemistry / Lipids)',
     results: [
       { parameter: 'Serum Sodium (Na+)', value: '141', unit: 'mEq/L', referenceRange: '135 - 145', isAbnormal: false },
       { parameter: 'Serum Potassium (K+)', value: '4.2', unit: 'mEq/L', referenceRange: '3.5 - 5.0', isAbnormal: false },
@@ -359,6 +369,14 @@ const INITIAL_LABS: LabOrder[] = [
     status: 'COMPLETED',
     requestedBy: 'Dr. Sarah Chen, MD',
     requestedAt: '2026-09-13T16:05:00Z',
+    specimenTube: 'Green Heparin (STAT Biomarkers)',
+    panicCallLog: {
+      calledTo: 'Dr. Sarah Chen, MD',
+      calledAt: '2026-09-13T16:12:00Z',
+      callerName: 'Elena Rostova (Lab Tech)',
+      readBackConfirmed: true,
+      notes: 'Verbal critical telephone notification given. Dr. Chen acknowledged hs-cTnI 48.6 ng/L.',
+    },
     results: [
       { parameter: 'hs-cTnI', value: '48.6', unit: 'ng/L', referenceRange: '< 14.0', isAbnormal: true, isPanicValue: true },
       { parameter: 'CK-MB', value: '12.4', unit: 'ng/mL', referenceRange: '0.0 - 5.0', isAbnormal: true },
@@ -376,6 +394,7 @@ const INITIAL_LABS: LabOrder[] = [
     status: 'PROCESSING',
     requestedBy: 'Dr. Marcus Vance, MD',
     requestedAt: '2026-09-14T08:10:00Z',
+    specimenTube: 'Lavender EDTA (Hematology / CBC)',
   },
   {
     id: 'lab-4',
@@ -389,6 +408,26 @@ const INITIAL_LABS: LabOrder[] = [
     status: 'COLLECTED',
     requestedBy: 'Dr. Sarah Chen, MD',
     requestedAt: '2026-09-14T08:45:00Z',
+    specimenTube: 'Lavender EDTA (Hematology / CBC)',
+  },
+  {
+    id: 'lab-5',
+    orderNumber: 'LAB-2026-0905',
+    patientId: 'p-1',
+    patientName: 'Eleanor Vance',
+    mrn: 'MRN-90214',
+    testName: 'Prothrombin Time & INR (Coagulation)',
+    testCategory: 'Coagulation',
+    priority: 'ROUTINE',
+    status: 'REJECTED',
+    requestedBy: 'Dr. Sarah Chen, MD',
+    requestedAt: '2026-10-18T10:15:00Z',
+    specimenTube: 'Light Blue Citrate (Coagulation / PT-INR)',
+    rejectionReason: 'Specimen Clotted in Light Blue Tube (Micro-clots detected)',
+    rejectedBy: 'Elena Rostova (Lab Tech)',
+    rejectedAt: '2026-10-18T10:45:00Z',
+    recollectionRequired: true,
+    resultSummary: 'SPECIMEN REJECTED: Specimen Clotted in Tube. Immediate recollection required.',
   },
 ];
 
@@ -3148,6 +3187,10 @@ export function saveStoredRefillRequests(requests: PrescriptionRefillRequest[]):
   }
 }
 
+export async function fetchPrescriptionRefillRequests(): Promise<PrescriptionRefillRequest[]> {
+  return getStoredRefillRequests();
+}
+
 export async function requestPrescriptionRefill(
   patientId: string,
   medicationId: string,
@@ -3273,6 +3316,236 @@ export async function reviewPrescriptionRefill(
 
   return { success: true, data: updatedRefill };
 }
+
+export async function completeTriageIntake(
+  patientId: string,
+  appointmentId: string,
+  vitalsInput: RecordVitalSignsInput,
+  targetRoom: string,
+): Promise<{ success: boolean; data?: PatientVital; error?: string }> {
+  const currentStaff = getActiveStaffUser();
+
+  // 1. Record vitals
+  const vitalsRes = await recordPatientVitals({
+    ...vitalsInput,
+    patientId,
+    recordedBy: vitalsInput.recordedBy || currentStaff.fullName || 'Nurse Chloe Bennett, RN',
+  });
+  if (!vitalsRes.success) {
+    return { success: false, error: vitalsRes.error };
+  }
+
+  // 2. Update appointment status to IN_PROGRESS and assign room
+  const apts = getStoredAppointments();
+  const targetApt = apts.find((a) => a.id === appointmentId);
+  if (targetApt) {
+    const updatedApt: Appointment = {
+      ...targetApt,
+      status: 'IN_PROGRESS',
+      roomNumber: targetRoom,
+      notes: targetApt.notes
+        ? `${targetApt.notes} | Triage Completed: Vitals recorded by ${currentStaff.fullName}, routed to ${targetRoom}`
+        : `Triage Completed: Vitals recorded by ${currentStaff.fullName}, routed to ${targetRoom}`,
+    };
+    saveStoredAppointments(apts.map((a) => (a.id === appointmentId ? updatedApt : a)));
+  }
+
+  // 3. Update room status to IN_USE / OCCUPIED
+  const rooms = getStoredHospitalRooms();
+  const targetRoomObj = rooms.find((r) => r.roomNumber === targetRoom || (r as any).name === targetRoom);
+  if (targetRoomObj) {
+    const updatedRoom: HospitalRoom = {
+      ...targetRoomObj,
+      status: 'IN_USE',
+      assignedPatient: targetApt?.patientName || 'Outpatient',
+      patientId,
+      mrn: targetApt?.mrn || 'MRN-00000',
+      reason: targetApt?.reason || 'Clinical Consultation',
+      elapsedMinutes: 0,
+    };
+    saveStoredHospitalRooms(rooms.map((r) => (r.id === targetRoomObj.id ? updatedRoom : r)));
+  }
+
+  recordAuditLogEntry({
+    action: 'TRIAGE_INTAKE_COMPLETED',
+    resource: 'triage',
+    resourceId: appointmentId,
+    userId: currentStaff.id,
+    userEmail: currentStaff.email,
+    userRole: currentStaff.role,
+    ipAddress: '192.168.1.30',
+    metadata: {
+      patientId,
+      appointmentId,
+      vitalsId: vitalsRes.data?.id,
+      bloodPressure: vitalsRes.data?.bloodPressure,
+      targetRoom,
+      triageNurse: currentStaff.fullName,
+    },
+  });
+
+  return { success: true, data: vitalsRes.data };
+}
+
+export async function logPanicValueCall(
+  orderId: string,
+  input: {
+    calledTo: string;
+    callerName?: string;
+    readBackConfirmed: boolean;
+    notes?: string;
+  },
+): Promise<{ success: boolean; data?: LabOrder; error?: string }> {
+  const currentStaff = getActiveStaffUser();
+  const orders = getStoredLabOrders();
+  const target = orders.find((o) => o.id === orderId);
+  if (!target) {
+    return { success: false, error: 'Diagnostic laboratory order not found.' };
+  }
+
+  const panicLog: PanicCallLog = {
+    calledTo: input.calledTo,
+    calledAt: new Date().toISOString(),
+    callerName: input.callerName || currentStaff.fullName || 'Elena Rostova (Lab Tech)',
+    readBackConfirmed: input.readBackConfirmed,
+    notes: input.notes || 'Verbal telephone read-back confirmed by clinician.',
+  };
+
+  const updatedOrder: LabOrder = {
+    ...target,
+    panicCallLog: panicLog,
+  };
+
+  const updatedList = orders.map((o) => (o.id === orderId ? updatedOrder : o));
+  saveStoredLabOrders(updatedList);
+
+  recordAuditLogEntry({
+    action: 'CRITICAL_PANIC_VALUE_NOTIFIED',
+    resource: 'diagnostic_orders',
+    resourceId: orderId,
+    userId: currentStaff.id,
+    userEmail: currentStaff.email,
+    userRole: currentStaff.role,
+    ipAddress: '192.168.1.88',
+    metadata: {
+      orderId,
+      orderNumber: target.orderNumber,
+      patientName: target.patientName,
+      testName: target.testName,
+      calledTo: input.calledTo,
+      readBackConfirmed: input.readBackConfirmed,
+    },
+  });
+
+  return { success: true, data: updatedOrder };
+}
+
+export async function triggerRecollectionRequisition(
+  rejectedOrderId: string,
+  clinicalNotes?: string,
+): Promise<{ success: boolean; data?: LabOrder; error?: string }> {
+  const currentStaff = getActiveStaffUser();
+  const orders = getStoredLabOrders();
+  const target = orders.find((o) => o.id === rejectedOrderId);
+  if (!target) {
+    return { success: false, error: 'Target diagnostic order not found.' };
+  }
+
+  const recollectionOrder: LabOrder = {
+    id: `lab-recollect-${Date.now()}`,
+    orderNumber: `RECOL-${target.orderNumber.replace('LAB-', '')}`,
+    patientId: target.patientId,
+    patientName: target.patientName,
+    mrn: target.mrn,
+    testName: target.testName,
+    testCategory: target.testCategory,
+    priority: 'URGENT',
+    status: 'ORDERED',
+    requestedBy: currentStaff.fullName || target.requestedBy,
+    requestedAt: new Date().toISOString(),
+    clinicalIndication: `Recollection due to prior specimen compromise: ${target.rejectionReason || 'CLIA quality rejection'}.${clinicalNotes ? ` (${clinicalNotes})` : ''}`,
+    specimenTube: target.specimenTube,
+  };
+
+  const updatedTarget: LabOrder = {
+    ...target,
+    recollectionRequired: false,
+    recollectionRequisitionId: recollectionOrder.id,
+  };
+
+  const updatedOrders = [recollectionOrder, ...orders.map((o) => (o.id === rejectedOrderId ? updatedTarget : o))];
+  saveStoredLabOrders(updatedOrders);
+
+  recordAuditLogEntry({
+    action: 'SPECIMEN_RECOLLECTION_REQUESTED',
+    resource: 'diagnostic_orders',
+    resourceId: recollectionOrder.id,
+    userId: currentStaff.id,
+    userEmail: currentStaff.email,
+    userRole: currentStaff.role,
+    ipAddress: '192.168.1.42',
+    metadata: {
+      previousOrderId: rejectedOrderId,
+      recollectionOrderNumber: recollectionOrder.orderNumber,
+      patientName: target.patientName,
+      testName: target.testName,
+      reason: target.rejectionReason,
+    },
+  });
+
+  return { success: true, data: recollectionOrder };
+}
+
+export async function updateRoomTurnover(
+  roomId: string,
+  newStatus: RoomStatus,
+  attendantName?: string,
+): Promise<{ success: boolean; data?: HospitalRoom; error?: string }> {
+  const currentStaff = getActiveStaffUser();
+  const rooms = getStoredHospitalRooms();
+  const target = rooms.find((r) => r.id === roomId);
+  if (!target) {
+    return { success: false, error: 'Examination suite not found.' };
+  }
+
+  const updatedRoom: HospitalRoom = {
+    ...target,
+    status: newStatus,
+    ...(newStatus === 'AVAILABLE'
+      ? {
+          assignedPatient: undefined,
+          patientId: undefined,
+          mrn: undefined,
+          reason: undefined,
+          elapsedMinutes: undefined,
+        }
+      : {}),
+  };
+
+  const updatedList = rooms.map((r) => (r.id === roomId ? updatedRoom : r));
+  saveStoredHospitalRooms(updatedList);
+
+  recordAuditLogEntry({
+    action: 'ROOM_TURNOVER_COMPLETED',
+    resource: 'hospital_rooms',
+    resourceId: roomId,
+    userId: currentStaff.id,
+    userEmail: currentStaff.email,
+    userRole: currentStaff.role,
+    ipAddress: '192.168.1.15',
+    metadata: {
+      roomId,
+      roomNumber: target.roomNumber,
+      previousStatus: target.status,
+      newStatus,
+      attendant: attendantName || currentStaff.fullName,
+      timestamp: new Date().toISOString(),
+    },
+  });
+
+  return { success: true, data: updatedRoom };
+}
+
 
 
 

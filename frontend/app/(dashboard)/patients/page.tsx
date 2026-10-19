@@ -15,9 +15,10 @@ import { PatientKpiGrid } from './_components/patient-kpi-grid';
 import { PatientRegistrationModal } from './_components/patient-registration-modal';
 import { EditPatientModal } from './_components/edit-patient-modal';
 import { PatientChartModal } from './_components/patient-chart-modal';
+import { PhysicianInbasket } from './_components/physician-inbasket';
 import { CommandMenu } from '@/components/command-menu';
-import { fetchPatients, createPatient } from '@/lib/api';
-import { Patient, CreatePatientInput } from '@/types';
+import { fetchPatients, createPatient, getActiveStaffUser } from '@/lib/api';
+import { Patient, CreatePatientInput, StaffUser } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -48,12 +49,20 @@ export default function PatientsPage() {
   const [selectedChartPatient, setSelectedChartPatient] = useState<Patient | null>(null);
   const [selectedPatientForEdit, setSelectedPatientForEdit] = useState<Patient | null>(null);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [currentStaff, setCurrentStaff] = useState<StaffUser>(getActiveStaffUser());
   const [, startTransition] = useTransition();
 
   const loadPatients = async (search?: string, bloodType?: string) => {
     const data = await fetchPatients(search, bloodType === 'ALL' ? undefined : bloodType);
     setPatients(data);
   };
+
+  useEffect(() => {
+    setCurrentStaff(getActiveStaffUser());
+    const handleStorage = () => setCurrentStaff(getActiveStaffUser());
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   useEffect(() => {
     loadPatients(searchQuery, bloodTypeFilter);
@@ -189,6 +198,16 @@ export default function PatientsPage() {
         inConsultCount={inConsultCount}
         dischargedCount={dischargedCount}
       />
+
+      {/* 2.5 PHYSICIAN DAILY CLINICAL INBASKET [FE-903] */}
+      {(currentStaff.role === 'PHYSICIAN' || currentStaff.role === 'ADMINISTRATOR') && (
+        <PhysicianInbasket
+          currentStaff={currentStaff}
+          patients={patients}
+          onViewChart={(patient) => setSelectedChartPatient(patient)}
+          onToast={showToast}
+        />
+      )}
 
       {/* 3. TIER 2: PRIMARY PATIENT DIRECTORY WORKLIST CARD */}
       <Card className="shadow-xs border-border">

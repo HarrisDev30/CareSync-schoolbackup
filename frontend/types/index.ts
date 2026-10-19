@@ -121,6 +121,9 @@ export interface LabResultItem {
   referenceRange: string;
   isAbnormal: boolean;
   isPanicValue?: boolean;
+  isPanic?: boolean;
+  flag?: string;
+  testName?: string;
 }
 
 export interface CreateDiagnosticOrderInput {
@@ -131,6 +134,21 @@ export interface CreateDiagnosticOrderInput {
   clinicalIndication?: string;
   physicianId?: string;
   physicianName?: string;
+}
+
+export type SpecimenTubeType =
+  | 'Lavender EDTA (Hematology / CBC)'
+  | 'Gold SST (Clinical Chemistry / Lipids)'
+  | 'Light Blue Citrate (Coagulation / PT-INR)'
+  | 'Green Heparin (STAT Biomarkers)'
+  | 'Sterile Container (Urinalysis / Culture)';
+
+export interface PanicCallLog {
+  calledTo: string;
+  calledAt: string;
+  callerName: string;
+  readBackConfirmed: boolean;
+  notes?: string;
 }
 
 export interface LabOrder {
@@ -146,6 +164,7 @@ export interface LabOrder {
   requestedBy: string;
   requestedAt: string;
   clinicalIndication?: string;
+  specimenTube?: SpecimenTubeType;
   results?: LabResultItem[];
   resultSummary?: string;
   verifiedBy?: string;
@@ -156,6 +175,9 @@ export interface LabOrder {
   rejectionReason?: string;
   rejectedBy?: string;
   rejectedAt?: string;
+  panicCallLog?: PanicCallLog;
+  recollectionRequired?: boolean;
+  recollectionRequisitionId?: string;
 }
 
 export interface AuditLogEntry {

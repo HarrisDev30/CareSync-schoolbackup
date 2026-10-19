@@ -48,9 +48,50 @@ export function AppSidebar({
   const isAdmin = currentStaff.role === 'ADMINISTRATOR';
   const isPhysician = currentStaff.role === 'PHYSICIAN';
   const isLabUser = currentStaff.role === 'LABORATORY_USER';
+  const isTriageNurse = currentStaff.role === 'TRIAGE_NURSE';
 
   // Role-Segmented Navigation Items
   const staffNav = React.useMemo(() => {
+    // 0. TRIAGE NURSE NAVIGATION
+    if (isTriageNurse) {
+      return [
+        {
+          title: "Triage Station",
+          url: "/triage",
+          icon: Activity,
+          isActive: true,
+          items: [
+            {
+              title: "Lobby Vitals Intake Queue",
+              url: "/triage",
+            },
+          ],
+        },
+        {
+          title: "Outpatient Schedule",
+          url: "/appointments",
+          icon: Calendar,
+          items: [
+            {
+              title: "Daily Appointment Worklist",
+              url: "/appointments",
+            },
+          ],
+        },
+        {
+          title: "Examination Suites",
+          url: "/rooms",
+          icon: Building2,
+          items: [
+            {
+              title: "Suites & Turnover Status",
+              url: "/rooms",
+            },
+          ],
+        },
+      ];
+    }
+
     // 1. ADMINISTRATOR NAVIGATION (Executive Governance & Facility Suite)
     if (isAdmin) {
       return [
@@ -203,7 +244,7 @@ export function AppSidebar({
         ],
       },
     ];
-  }, [isAdmin, isPhysician, isLabUser]);
+  }, [isAdmin, isPhysician, isLabUser, isTriageNurse]);
 
   const patientNav = [
     {

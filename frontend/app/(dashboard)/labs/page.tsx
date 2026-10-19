@@ -25,6 +25,7 @@ import {
   Loader2,
   Printer,
   XCircle,
+  PhoneCall,
 } from 'lucide-react';
 import { LabOrder, DiagnosticPriority, DiagnosticStatus, Patient, CreateDiagnosticOrderInput, LabResultItem } from '@/types';
 import {
@@ -35,6 +36,7 @@ import {
   submitDiagnosticResult,
   verifyDiagnosticResult,
   reviewDiagnosticResult,
+  triggerRecollectionRequisition,
 } from '@/lib/api';
 import { CommandMenu } from '@/components/command-menu';
 import { DiagnosticReportExportModal } from '@/components/diagnostic-report-export-modal';
@@ -72,6 +74,7 @@ import { RequisitionModal } from './_components/requisition-modal';
 import { ResultsEntryModal } from './_components/results-entry-modal';
 import { ResultsFindingsModal } from './_components/results-findings-modal';
 import { SpecimenRejectionModal } from './_components/specimen-rejection-modal';
+import { PanicCallModal } from './_components/panic-call-modal';
 
 export default function LabsPage() {
   const [orders, setOrders] = useState<LabOrder[]>([]);
@@ -86,6 +89,7 @@ export default function LabsPage() {
   const [selectedOrderForEntry, setSelectedOrderForEntry] = useState<LabOrder | null>(null);
   const [orderToExport, setOrderToExport] = useState<LabOrder | null>(null);
   const [orderToReject, setOrderToReject] = useState<LabOrder | null>(null);
+  const [orderForPanicCall, setOrderForPanicCall] = useState<LabOrder | null>(null);
   const [isRequisitionOpen, setIsRequisitionOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -270,6 +274,62 @@ export default function LabsPage() {
       default:
         return null;
     }
+  };
+
+  const renderSpecimenTubeBadge = (tube?: string, testCategory?: string, testName?: string) => {
+    let tubeName = tube;
+    if (!tubeName) {
+      if (testCategory?.includes('Hematology') || testName?.includes('CBC')) {
+        tubeName = 'Lavender EDTA (Hematology / CBC)';
+      } else if (testCategory?.includes('Coagulation') || testName?.includes('PT')) {
+        tubeName = 'Light Blue Citrate (Coagulation / PT-INR)';
+      } else if (testCategory?.includes('Biomarker') || testName?.includes('Troponin')) {
+        tubeName = 'Green Heparin (STAT Biomarkers)';
+      } else if (testCategory?.includes('Urinalysis') || testName?.includes('Urine')) {
+        tubeName = 'Sterile Container (Urinalysis / Culture)';
+      } else {
+        tubeName = 'Gold SST (Clinical Chemistry / Lipids)';
+      }
+    }
+
+    if (tubeName.includes('Lavender')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+          <span className="size-2 rounded-full bg-purple-600 shrink-0" />
+          <span>Lavender EDTA</span>
+        </span>
+      );
+    }
+    if (tubeName.includes('Gold')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+          <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+          <span>Gold SST</span>
+        </span>
+      );
+    }
+    if (tubeName.includes('Light Blue')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-sky-500/10 text-sky-700 dark:text-sky-300 border border-sky-500/30">
+          <span className="size-2 rounded-full bg-sky-500 shrink-0" />
+          <span>Citrate Blue</span>
+        </span>
+      );
+    }
+    if (tubeName.includes('Green')) {
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+          <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+          <span>Heparin Green</span>
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-muted text-foreground border border-border">
+        <span className="size-2 rounded-full bg-muted-foreground shrink-0" />
+        <span>Sterile Cup</span>
+      </span>
+    );
   };
 
   const renderStatusBadge = (status: DiagnosticStatus) => {
@@ -611,6 +671,7 @@ export default function LabsPage() {
                   const isAwaitingResults = order.status === 'COLLECTED' || order.status === 'PROCESSING' || order.status === 'IN_ANALYSIS';
                   const isResulted = order.status === 'RESULTED';
                   const isCompleted = order.status === 'VERIFIED' || order.status === 'REVIEWED' || order.status === 'COMPLETED';
+                  const hasPanicValue = order.results?.some((r) => r.isPanic || r.flag === 'CRITICAL');
 
                   return (
                     <TableRow
@@ -648,13 +709,16 @@ export default function LabsPage() {
                         </div>
                       </TableCell>
 
-                      {/* Column 3: Diagnostic Panel */}
+                      {/* Column 3: Diagnostic Panel & Specimen Container Tube */}
                       <TableCell className="py-4">
                         <div className="font-medium text-sm text-foreground leading-snug">
                           {order.testName}
                         </div>
                         <div className="text-xs text-muted-foreground mt-0.5">
                           {order.testCategory}
+                        </div>
+                        <div className="mt-1.5">
+                          {renderSpecimenTubeBadge(order.specimenTube, order.testCategory, order.testName)}
                         </div>
                       </TableCell>
 
@@ -675,17 +739,68 @@ export default function LabsPage() {
                       {/* Column 7: Actions */}
                       <TableCell className="pr-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                          {/* Panic Alert Call Badge or Button */}
+                          {hasPanicValue && (
+                            order.panicCallLog ? (
+                              <Badge
+                                variant="outline"
+                                className="border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold text-xs py-1 px-2 gap-1"
+                                title={`Verbal read-back logged by ${order.panicCallLog.callerName} to ${order.panicCallLog.calledTo}`}
+                              >
+                                <PhoneCall className="size-3 text-emerald-600 dark:text-emerald-400" />
+                                <span>MD Notified</span>
+                              </Badge>
+                            ) : (
+                              <Button
+                                size="sm"
+                                onClick={() => setOrderForPanicCall(order)}
+                                className="text-xs h-8 px-2.5 bg-red-600 hover:bg-red-700 text-white font-semibold shadow-xs animate-pulse cursor-pointer gap-1.5"
+                                title="CLIA Critical Value: Attending Physician Read-Back Call Mandatory"
+                              >
+                                <PhoneCall className="size-3.5" />
+                                <span>Log Call</span>
+                              </Button>
+                            )
+                          )}
+
                           {order.status === 'REJECTED' ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedOrderForFindings(order)}
-                              className="text-xs text-destructive hover:bg-destructive/10 h-8 px-2.5 cursor-pointer font-medium border-destructive/30"
-                              title={order.rejectionReason}
-                            >
-                              <AlertCircle className="size-3.5 mr-1" />
-                              <span>View Rejection</span>
-                            </Button>
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedOrderForFindings(order)}
+                                className="text-xs text-destructive hover:bg-destructive/10 h-8 px-2.5 cursor-pointer font-medium border-destructive/30"
+                                title={order.rejectionReason}
+                              >
+                                <AlertCircle className="size-3.5 mr-1" />
+                                <span>View Rejection</span>
+                              </Button>
+                              {order.recollectionRequired && !order.recollectionRequisitionId && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={async () => {
+                                    const res = await triggerRecollectionRequisition(order.id);
+                                    if (res.success && res.data) {
+                                      setOrders((prev) => [res.data!, ...prev.map((o) => (o.id === order.id ? { ...o, recollectionRequisitionId: res.data!.id } : o))]);
+                                      showToast('success', `Recollection requisition ${res.data.orderNumber} initiated for ${order.patientName}.`);
+                                    } else {
+                                      showToast('error', res.error || 'Failed to trigger recollection.');
+                                    }
+                                  }}
+                                  className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 border-amber-500/30 h-8 px-2.5 cursor-pointer font-medium"
+                                  title="Order replacement tube specimen recollection"
+                                >
+                                  <RotateCcw className="size-3.5 mr-1" />
+                                  <span>Recollect</span>
+                                </Button>
+                              )}
+                              {order.recollectionRequisitionId && (
+                                <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground border-border">
+                                  Recollection Reordered
+                                </Badge>
+                              )}
+                            </div>
                           ) : isPendingCollection ? (
                             <div className="flex items-center gap-1.5">
                               <Button
@@ -836,6 +951,17 @@ export default function LabsPage() {
         onOrderRejected={(rejected) => {
           setOrders((prev) => prev.map((o) => (o.id === rejected.id ? rejected : o)));
           showToast('error', `Specimen rejected: ${rejected.rejectionReason}. Recollection protocol initiated.`);
+        }}
+      />
+
+      {/* Panic Value Telephone Call-Back Modal [FE-902] */}
+      <PanicCallModal
+        isOpen={!!orderForPanicCall}
+        onClose={() => setOrderForPanicCall(null)}
+        order={orderForPanicCall}
+        onCallLogged={(updated: LabOrder) => {
+          setOrders((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+          showToast('success', `Verbal panic value call logged to ${updated.panicCallLog?.calledTo}. Read-back confirmed.`);
         }}
       />
 

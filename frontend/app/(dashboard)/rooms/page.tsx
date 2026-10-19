@@ -49,6 +49,7 @@ import {
   createHospitalRoom,
   updateHospitalRoom,
   deleteHospitalRoom,
+  updateRoomTurnover,
   getActiveStaffUser,
   STAFF_PRESETS,
 } from '@/lib/api';
@@ -155,6 +156,26 @@ export default function RoomsPage() {
     if (res.success) {
       showToast('success', `${room.roomNumber} status set to ${newStatus}.`);
       await loadData();
+    }
+  };
+
+  const handleCertifyCleanAndReady = async (room: HospitalRoom) => {
+    const res = await updateRoomTurnover(room.id, 'AVAILABLE');
+    if (res.success && res.data) {
+      showToast('success', `Suite ${room.roomNumber} certified clean & ready for triage intake.`);
+      await loadData();
+    } else {
+      showToast('info', res.error || 'Failed to certify room.');
+    }
+  };
+
+  const handleStartSanitizing = async (room: HospitalRoom) => {
+    const res = await updateRoomTurnover(room.id, 'SANITIZING');
+    if (res.success && res.data) {
+      showToast('success', `Suite ${room.roomNumber} vacated and flagged for sanitization turnover.`);
+      await loadData();
+    } else {
+      showToast('info', res.error || 'Failed to start sanitization.');
     }
   };
 
@@ -769,13 +790,12 @@ export default function RoomsPage() {
 
                             {isSanitizing && (
                               <Button
-                                variant="outline"
                                 size="sm"
-                                onClick={() => handleQuickStatusToggle(room, 'AVAILABLE')}
-                                className="h-8 px-2.5 text-xs gap-1 border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 cursor-pointer"
+                                onClick={() => handleCertifyCleanAndReady(room)}
+                                className="h-8 px-2.5 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium cursor-pointer shadow-xs"
                               >
                                 <CheckCircle2 className="size-3" />
-                                <span>Mark Ready</span>
+                                <span>Certify Clean</span>
                               </Button>
                             )}
 
@@ -793,28 +813,32 @@ export default function RoomsPage() {
 
                             {(isInUse || isStat) && (
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                onClick={() => handleQuickStatusToggle(room, 'AVAILABLE')}
-                                className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                                onClick={() => handleStartSanitizing(room)}
+                                className="h-8 px-2 text-xs text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 cursor-pointer font-medium"
+                                title="Initiate turnover sanitization"
                               >
-                                <span>Free Suite</span>
+                                <Sparkles className="size-3 mr-1" />
+                                <span>Turnover</span>
                               </Button>
                             )}
                           </div>
                         </div>
                       ) : (
-                        // Front-Desk / Doctor Action Toolbar
+                        // Front-Desk / Doctor / Triage Nurse Action Toolbar
                         <div className="w-full flex items-center justify-between gap-2 min-w-0">
                           {isInUse || isStat ? (
                             <>
                               <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
-                                onClick={() => handleQuickStatusToggle(room, 'AVAILABLE')}
-                                className="h-8 text-xs px-2.5 text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
+                                onClick={() => handleStartSanitizing(room)}
+                                className="h-8 text-xs px-2.5 text-amber-700 dark:text-amber-400 hover:bg-amber-500/10 border-amber-500/30 cursor-pointer shrink-0 font-medium"
+                                title="Vacate suite and initiate sanitization turnover"
                               >
-                                Free Room
+                                <Sparkles className="size-3 mr-1" />
+                                <span>Discharge & Clean</span>
                               </Button>
                               <Button
                                 size="sm"
@@ -827,13 +851,12 @@ export default function RoomsPage() {
                             </>
                           ) : isSanitizing ? (
                             <Button
-                              variant="outline"
                               size="sm"
-                              onClick={() => handleQuickStatusToggle(room, 'AVAILABLE')}
-                              className="w-full h-8 text-xs border-border text-foreground cursor-pointer gap-1.5 font-medium"
+                              onClick={() => handleCertifyCleanAndReady(room)}
+                              className="w-full h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer gap-1.5 font-medium shadow-xs"
                             >
-                              <CheckCircle2 className="size-3.5 text-emerald-600" />
-                              <span>Mark Ready</span>
+                              <CheckCircle2 className="size-3.5" />
+                              <span>Certify Clean & Ready</span>
                             </Button>
                           ) : (
                             <Button
