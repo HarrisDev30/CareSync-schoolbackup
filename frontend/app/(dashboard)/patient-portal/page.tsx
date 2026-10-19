@@ -28,6 +28,7 @@ import {
   fetchConsultations,
   getStoredDischargeSummary,
   updateAppointmentStatus,
+  requestPrescriptionRefill,
 } from '@/lib/api';
 import {
   Patient,
@@ -71,6 +72,7 @@ function PatientPortalContent() {
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [cancellingApt, setCancellingApt] = useState<Appointment | null>(null);
   const [confirmingAptId, setConfirmingAptId] = useState<string | null>(null);
+  const [submittingRefillId, setSubmittingRefillId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -156,6 +158,44 @@ function PatientPortalContent() {
         : prev,
     );
     triggerToast(`Appointment with ${updatedApt.physicianName} has been cancelled.`);
+  };
+
+  const handleRequestRefill = async (med: PatientMedication) => {
+    if (!data?.patient) return;
+    setSubmittingRefillId(med.id);
+    try {
+      const res = await requestPrescriptionRefill(
+        data.patient.id,
+        med.id,
+        'Patient requested standard 30-day maintenance renewal via Outpatient Portal.',
+      );
+      if (res.success && res.data) {
+        setData((prev) =>
+          prev
+            ? {
+                ...prev,
+                medications: prev.medications.map((m) =>
+                  m.id === med.id
+                    ? {
+                        ...m,
+                        refillStatus: 'PENDING',
+                        refillRequestedAt: res.data!.requestedAt,
+                        refillNotes: res.data!.notes,
+                      }
+                    : m,
+                ),
+              }
+            : prev,
+        );
+        triggerToast(
+          `Refill request submitted to ${med.prescribedBy} for ${med.name}. Awaiting clinical authorization.`,
+        );
+      } else {
+        triggerToast(res.error || 'Failed to submit refill request.');
+      }
+    } finally {
+      setSubmittingRefillId(null);
+    }
   };
 
   if (loading || !data) {
@@ -829,19 +869,57 @@ function PatientPortalContent() {
                       {med.instructions}
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 gap-2 flex-wrap">
                       <span>Prescribed by {med.prescribedBy}</span>
                       {isActive && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            triggerToast(`Refill request sent to ${med.prescribedBy} for ${med.name}.`)
-                          }
-                          className="h-8 px-3 text-xs font-medium cursor-pointer border-border"
-                        >
-                          Request Refill
-                        </Button>
+                        <div>
+                          {med.refillStatus === 'PENDING' ? (
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-mono py-1 px-2.5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 gap-1.5 flex items-center"
+                            >
+                              <Clock className="size-3 text-amber-600 animate-pulse" />
+                              <span>Refill Pending Review</span>
+                            </Badge>
+                          ) : med.refillStatus === 'APPROVED' ? (
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-mono py-1 px-2.5 border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 gap-1.5 flex items-center"
+                            >
+                              <CheckCircle2 className="size-3 text-emerald-600" />
+                              <span>Refill Authorized (30-Day Ext.)</span>
+                            </Badge>
+                          ) : med.refillStatus === 'DENIED' ? (
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                variant="outline"
+                                className="text-xs font-mono py-1 px-2.5 border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300 gap-1.5 flex items-center"
+                              >
+                                <AlertCircle className="size-3 text-rose-600" />
+                                <span>Refill Denied (Consult Required)</span>
+                              </Badge>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={submittingRefillId === med.id}
+                                onClick={() => handleRequestRefill(med)}
+                                className="h-8 px-2.5 text-xs font-medium cursor-pointer"
+                              >
+                                Re-request
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={submittingRefillId === med.id}
+                              onClick={() => handleRequestRefill(med)}
+                              className="h-8 px-3 text-xs font-medium cursor-pointer border-border hover:bg-primary/10 hover:border-primary/40 hover:text-primary transition-colors"
+                            >
+                              {submittingRefillId === med.id ? 'Submitting...' : 'Request Refill'}
+                            </Button>
+                          )}
+                        </div>
                       )}
                     </div>
                   </CardContent>

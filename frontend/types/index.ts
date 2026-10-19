@@ -38,6 +38,25 @@ export interface CreatePatientInput {
   emergencyContactPhone?: string;
 }
 
+export interface UpdatePatientInput {
+  firstName?: string;
+  lastName?: string;
+  dateOfBirth?: string;
+  gender?: Gender;
+  bloodType?: BloodType;
+  phoneNumber?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  primaryPhysician?: string;
+  knownAllergies?: string[];
+  allergies?: string[];
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContact?: string;
+  status?: PatientStatus;
+}
+
 export interface ApiResponse<T> {
   statusCode: number;
   message?: string;
@@ -71,6 +90,16 @@ export interface CreateAppointmentInput {
   notes?: string;
 }
 
+export interface RescheduleAppointmentInput {
+  scheduledAt: string;
+  durationMinutes?: number;
+  physicianId?: string;
+  physicianName?: string;
+  roomNumber?: string;
+  reason?: string;
+  notes?: string;
+}
+
 export type DiagnosticPriority = 'ROUTINE' | 'URGENT' | 'STAT';
 export type DiagnosticStatus =
   | 'ORDERED'
@@ -82,6 +111,7 @@ export type DiagnosticStatus =
   | 'VERIFIED'
   | 'REVIEWED'
   | 'COMPLETED'
+  | 'REJECTED'
   | 'CANCELLED';
 
 export interface LabResultItem {
@@ -123,6 +153,9 @@ export interface LabOrder {
   reviewedBy?: string;
   reviewedAt?: string;
   physicianReviewNotes?: string;
+  rejectionReason?: string;
+  rejectedBy?: string;
+  rejectedAt?: string;
 }
 
 export interface AuditLogEntry {
@@ -157,7 +190,40 @@ export interface PatientVital {
   temperature: number;
   respiratoryRate: number;
   weightKg?: number;
+  painScore?: number;
+  recordedBy?: string;
   notes?: string;
+}
+
+export interface RecordVitalSignsInput {
+  patientId: string;
+  systolic: number;
+  diastolic: number;
+  heartRate: number;
+  oxygenSaturation: number;
+  temperature: number;
+  respiratoryRate?: number;
+  weightKg?: number;
+  painScore?: number;
+  notes?: string;
+  recordedBy?: string;
+}
+
+export interface PrescriptionRefillRequest {
+  id: string;
+  patientId: string;
+  patientName: string;
+  patientMrn: string;
+  medicationId: string;
+  medicationName: string;
+  dosage: string;
+  prescribedBy: string;
+  requestedAt: string;
+  status: 'PENDING' | 'APPROVED' | 'DENIED';
+  notes?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
 }
 
 export interface PatientMedication {
@@ -169,6 +235,9 @@ export interface PatientMedication {
   startDate: string;
   instructions: string;
   status: 'Active' | 'Discontinued' | 'As Needed';
+  refillStatus?: 'PENDING' | 'APPROVED' | 'DENIED';
+  refillRequestedAt?: string;
+  refillNotes?: string;
 }
 
 export interface VitalSigns {

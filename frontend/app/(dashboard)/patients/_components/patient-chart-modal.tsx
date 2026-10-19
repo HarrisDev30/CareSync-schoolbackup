@@ -28,13 +28,16 @@ import {
   Check,
   Loader2,
   Printer,
+  Edit3,
 } from 'lucide-react';
 import {
   Patient,
   Consultation,
   VitalSigns,
+  PatientVital,
   CreateConsultationInput,
   PatientMedication,
+  PrescriptionRefillRequest,
   DischargeSummary,
   LabOrder,
 } from '@/types';
@@ -72,10 +75,15 @@ import {
   getStoredDischargeSummary,
   fetchLabOrders,
   createDiagnosticOrder,
+  recordPatientVitals,
+  getStoredVitals,
+  getStoredRefillRequests,
+  reviewPrescriptionRefill,
 } from '@/lib/api';
 import { evaluatePrescriptionSafety, CdsEvaluationResult } from '@/lib/cds-engine';
 import { MedicalRecordExportModal } from '@/components/medical-record-export-modal';
 import { DiagnosticReportExportModal } from '@/components/diagnostic-report-export-modal';
+import { EditPatientModal } from './edit-patient-modal';
 
 interface PatientChartModalProps {
   patient: Patient | null;
@@ -268,6 +276,8 @@ export function PatientChartModal({
 
   // Medications & E-Prescriptions State
   const [medications, setMedications] = useState<PatientMedication[]>([]);
+  const [refillRequests, setRefillRequests] = useState<PrescriptionRefillRequest[]>([]);
+  const [reviewingRefillId, setReviewingRefillId] = useState<string | null>(null);
   const [dischargeSummary, setDischargeSummary] = useState<DischargeSummary | null>(null);
 
   // E-Prescription Input Form
@@ -280,6 +290,7 @@ export function PatientChartModal({
   const [isIssuingRx, setIsIssuingRx] = useState(false);
   const [isCdsOverridden, setIsCdsOverridden] = useState(false);
   const [cdsOverrideReason, setCdsOverrideReason] = useState('');
+  const [isEditDemographicsOpen, setIsEditDemographicsOpen] = useState(false);
 
   // Discharge Form State
   const [dischargeDisposition, setDischargeDisposition] = useState<DischargeSummary['disposition']>('Home / Self-Care');
@@ -304,6 +315,10 @@ export function PatientChartModal({
   const [temperature, setTemperature] = useState('36.8');
   const [respiratoryRate, setRespiratoryRate] = useState('16');
   const [weightKg, setWeightKg] = useState('68.5');
+  const [painScore, setPainScore] = useState('0');
+  const [vitalsNotes, setVitalsNotes] = useState('');
+  const [isRecordingVitals, setIsRecordingVitals] = useState(false);
+  const [vitalsHistory, setVitalsHistory] = useState<PatientVital[]>([]);
 
   // Safe Medical Record Correction / Addendum State [FE-602]
   const [amendingNoteId, setAmendingNoteId] = useState<string | null>(null);
@@ -341,9 +356,20 @@ export function PatientChartModal({
 
     setAttendingPhysician(patient.primaryPhysician || PHYSICIAN_PRESETS[0]?.name || 'Dr. Sarah Chen, MD');
 
-    // Load Medications & Discharge Summary
+    // Load Medications & Discharge Summary & Vitals
     setMedications(getStoredMedications(patient.id));
     setDischargeSummary(getStoredDischargeSummary(patient.id));
+    setVitalsHistory(getStoredVitals(patient.id));
+
+    // Load Refill Requests [FE-805]
+    const allRefills = getStoredRefillRequests();
+    const patientRefills = allRefills.filter(
+      (r) =>
+        r.patientId === patient.id ||
+        r.patientMrn === patient.mrn ||
+        (patient.fullName && patient.fullName.includes('Eleanor')),
+    );
+    setRefillRequests(patientRefills);
 
     // Load Diagnostic Lab Orders [FE-702]
     loadLabOrders();
@@ -517,6 +543,33 @@ export function PatientChartModal({
     showNotice('success', `Switched to safe alternative: ${alt.drugName}`);
   };
 
+  // Prescription Refill Authorization Handler [FE-805]
+  const handleReviewRefill = async (refillId: string, action: 'APPROVE' | 'DENY', note?: string) => {
+    if (!patient) return;
+    setReviewingRefillId(refillId);
+    try {
+      const res = await reviewPrescriptionRefill(refillId, action, note);
+      if (res.success && res.data) {
+        setRefillRequests((prev) =>
+          prev.map((r) => (r.id === refillId ? res.data! : r)),
+        );
+        setMedications(getStoredMedications(patient.id));
+        showNotice(
+          'success',
+          action === 'APPROVE'
+            ? `Prescription renewal approved for ${res.data.medicationName}. Extended 30 days.`
+            : `Prescription refill denied for ${res.data.medicationName}. Recorded in audit ledger.`,
+        );
+      } else {
+        showNotice('error', res.error || 'Failed to review refill authorization.');
+      }
+    } catch (err: any) {
+      showNotice('error', err?.message || 'Error processing refill.');
+    } finally {
+      setReviewingRefillId(null);
+    }
+  };
+
   // Patient Discharge Handler [BE-601]
   const handleDischargePatient = async () => {
     if (!dischargeNotes.trim()) {
@@ -550,6 +603,57 @@ export function PatientChartModal({
       showNotice('error', err?.message || 'Error processing discharge.');
     } finally {
       setIsDischarging(false);
+    }
+  };
+
+  // Standalone Vital Signs Triage Intake Handler [FE-802]
+  const handleRecordVitals = async () => {
+    if (!patient) return;
+    const sys = parseInt(systolic, 10);
+    const dia = parseInt(diastolic, 10);
+    const hr = parseInt(heartRate, 10);
+    const spo2 = parseInt(oxygenSaturation, 10);
+    const temp = parseFloat(temperature);
+    const rr = parseInt(respiratoryRate, 10) || 16;
+    const wt = weightKg ? parseFloat(weightKg) : undefined;
+    const pain = parseInt(painScore, 10) || 0;
+
+    if (isNaN(sys) || isNaN(dia) || isNaN(hr) || isNaN(temp)) {
+      showNotice('error', 'Please enter valid numerical values for BP, HR, and Temperature.');
+      return;
+    }
+
+    setIsRecordingVitals(true);
+    try {
+      const res = await recordPatientVitals({
+        patientId: patient.id,
+        systolic: sys,
+        diastolic: dia,
+        heartRate: hr,
+        oxygenSaturation: spo2 || 98,
+        temperature: temp,
+        respiratoryRate: rr,
+        weightKg: wt,
+        painScore: pain,
+        notes: vitalsNotes.trim() || 'Routine outpatient clinical vital signs intake.',
+        recordedBy: attendingPhysician || patient.primaryPhysician || 'Triage Clinician',
+      });
+
+      if (res.success && res.data) {
+        setVitalsHistory((prev) => [res.data!, ...prev]);
+        showNotice(
+          'success',
+          `Vital signs intake (${res.data.bloodPressure}, HR ${res.data.heartRate} bpm) recorded into permanent EHR ledger.`,
+        );
+        setVitalsNotes('');
+        onConsultationSaved?.();
+      } else {
+        showNotice('error', res.error || 'Failed to record vitals.');
+      }
+    } catch (err: any) {
+      showNotice('error', err?.message || 'Error recording vitals.');
+    } finally {
+      setIsRecordingVitals(false);
     }
   };
 
@@ -706,7 +810,7 @@ export function PatientChartModal({
         .slice(0, 2)
     : 'PT';
 
-  const historyVitals = patient.fullName.includes('Eleanor') ? ELEANOR_VITALS : [];
+  const historyVitals = vitalsHistory.length > 0 ? vitalsHistory : (patient.fullName.includes('Eleanor') ? ELEANOR_VITALS : []);
 
   return (
     <>
@@ -755,6 +859,17 @@ export function PatientChartModal({
 
             {/* Quick Actions */}
             <div className="flex items-center gap-2 self-start sm:self-center mr-8 sm:mr-9">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditDemographicsOpen(true)}
+                className="h-8 text-xs gap-1.5 cursor-pointer border-border hover:bg-muted text-foreground"
+                title="Edit Patient Demographics & Known Allergies"
+              >
+                <Edit3 className="size-3.5 text-muted-foreground" />
+                <span>Edit Profile</span>
+              </Button>
+
               <Button
                 variant="outline"
                 size="sm"
@@ -864,6 +979,14 @@ export function PatientChartModal({
                 {medications.length > 0 && (
                   <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-mono ml-0.5">
                     {medications.length}
+                  </Badge>
+                )}
+                {refillRequests.some((r) => r.status === 'PENDING') && (
+                  <Badge
+                    variant="outline"
+                    className="h-4 px-1.5 text-[10px] font-mono ml-0.5 border-amber-500/40 bg-amber-500/20 text-amber-700 dark:text-amber-300 animate-pulse font-bold"
+                  >
+                    {refillRequests.filter((r) => r.status === 'PENDING').length} Refill
                   </Badge>
                 )}
               </TabsTrigger>
@@ -1732,21 +1855,81 @@ export function PatientChartModal({
                       Adult scale
                     </div>
                   </div>
+
+                  {/* Pain Score (NRS 0-10) */}
+                  <div className="space-y-1">
+                    <label className="text-muted-foreground flex items-center gap-1 font-medium">
+                      <AlertTriangle className="size-3 text-amber-500" />
+                      Pain Score (0–10)
+                    </label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="10"
+                      value={painScore}
+                      onChange={(e) => setPainScore(e.target.value)}
+                      className="h-9 font-mono text-sm bg-background border-border"
+                      placeholder="0"
+                    />
+                    <div className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                      {parseInt(painScore, 10) === 0 ? 'No Pain' : parseInt(painScore, 10) <= 3 ? 'Mild' : parseInt(painScore, 10) <= 6 ? 'Moderate' : 'Severe'}
+                    </div>
+                  </div>
                 </div>
 
-                <div className="pt-2 flex justify-end">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => {
-                      showNotice('success', 'Vitals synced. These values are attached to your current SOAP note.');
-                      setActiveTab('soap');
-                    }}
-                    className="h-8 text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
-                  >
-                    <Sparkles className="size-3.5" />
-                    <span>Apply Vitals to SOAP Note</span>
-                  </Button>
+                {/* Triage / Clinical Observation Notes */}
+                <div className="pt-2">
+                  <label className="text-xs font-medium text-foreground block mb-1">
+                    Triage Notes & Clinical Observations
+                  </label>
+                  <Input
+                    value={vitalsNotes}
+                    onChange={(e) => setVitalsNotes(e.target.value)}
+                    placeholder="e.g. Patient seated calmly x 5 mins prior to blood pressure intake. Bilateral brachial cuffs."
+                    className="h-9 text-xs bg-background border-border"
+                  />
+                </div>
+
+                <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/60">
+                  <span className="text-[11px] text-muted-foreground">
+                    Record persists into longitudinal EHR chart and patient portal.
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        showNotice('success', 'Vitals synced. These values are attached to your current SOAP note.');
+                        setActiveTab('soap');
+                      }}
+                      className="h-8 text-xs gap-1.5 cursor-pointer border-border hover:bg-muted text-foreground"
+                    >
+                      <Sparkles className="size-3.5" />
+                      <span>Apply to Current SOAP</span>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={isRecordingVitals}
+                      onClick={handleRecordVitals}
+                      className="h-8 text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+                    >
+                      {isRecordingVitals ? (
+                        <>
+                          <Loader2 className="size-3.5 animate-spin" />
+                          <span>Saving Intake...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="size-3.5" />
+                          <span>Record Vital Signs (Permanent EHR)</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -2188,6 +2371,104 @@ export function PatientChartModal({
             {/* TAB 5: PRESCRIPTIONS (Rx) & PATIENT DISCHARGE SUMMARY */}
             {/* ======================================================== */}
             <TabsContent value="prescriptions" className="mt-0 space-y-6">
+              {/* 0. PENDING REFILL AUTHORIZATION REQUESTS [FE-805] */}
+              {refillRequests.length > 0 && (
+                <div className="border border-border rounded-xl p-4 bg-card shadow-xs space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-2.5">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Clock className="size-4 text-amber-600 dark:text-amber-400" />
+                        Prescription Refill Authorizations & Renewal Queue
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Patient-initiated medication refill requests requiring attending clinician review.
+                      </p>
+                    </div>
+                    <Badge
+                      variant="outline"
+                      className={`text-xs font-mono self-start sm:self-center ${
+                        refillRequests.some((r) => r.status === 'PENDING')
+                          ? 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                          : 'border-border'
+                      }`}
+                    >
+                      {refillRequests.filter((r) => r.status === 'PENDING').length} Pending Action
+                    </Badge>
+                  </div>
+
+                  <div className="divide-y divide-border/60">
+                    {refillRequests.map((refill) => {
+                      const isPending = refill.status === 'PENDING';
+                      return (
+                        <div
+                          key={refill.id}
+                          className="py-3 first:pt-1 last:pb-1 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="space-y-1.5 min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-foreground text-sm">
+                                {refill.medicationName} ({refill.dosage})
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] font-mono uppercase px-2 py-0.5 font-bold ${
+                                  refill.status === 'PENDING'
+                                    ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                                    : refill.status === 'APPROVED'
+                                    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40'
+                                    : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40'
+                                }`}
+                              >
+                                {refill.status}
+                              </Badge>
+                              <span className="text-[11px] font-mono text-muted-foreground">
+                                Requested {new Date(refill.requestedAt).toLocaleDateString()} at{' '}
+                                {new Date(refill.requestedAt).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              <strong className="text-foreground">Patient Request:</strong> {refill.notes}
+                            </p>
+                            {refill.reviewedBy && (
+                              <p className="text-[11px] text-muted-foreground font-mono">
+                                Reviewed by <strong>{refill.reviewedBy}</strong> on{' '}
+                                {new Date(refill.reviewedAt || '').toLocaleDateString()} — Note: &ldquo;{refill.reviewNotes}&rdquo;
+                              </p>
+                            )}
+                          </div>
+
+                          {isPending && (
+                            <div className="flex items-center gap-2 shrink-0 pt-1 md:pt-0">
+                              <Button
+                                size="sm"
+                                disabled={reviewingRefillId === refill.id}
+                                onClick={() => handleReviewRefill(refill.id, 'APPROVE')}
+                                className="h-8 px-3 text-xs font-medium cursor-pointer gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                              >
+                                <CheckCircle2 className="size-3.5" />
+                                <span>{reviewingRefillId === refill.id ? 'Approving...' : 'Approve (30d Ext.)'}</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={reviewingRefillId === refill.id}
+                                onClick={() => handleReviewRefill(refill.id, 'DENY')}
+                                className="h-8 px-3 text-xs font-medium cursor-pointer border-destructive/40 text-destructive hover:bg-destructive/10"
+                              >
+                                <span>Deny</span>
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* 1. ACTIVE MEDICATIONS TABLE */}
               <div className="border border-border rounded-xl p-4 bg-card shadow-xs space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-2.5">
@@ -2225,6 +2506,30 @@ export function PatientChartModal({
                             >
                               {med.status}
                             </Badge>
+                            {med.refillStatus === 'PENDING' && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] font-mono uppercase px-2 py-0.2 bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 animate-pulse font-semibold"
+                              >
+                                Refill Pending Review
+                              </Badge>
+                            )}
+                            {med.refillStatus === 'APPROVED' && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] font-mono uppercase px-2 py-0.2 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-semibold"
+                              >
+                                Refill Approved (30d Ext.)
+                              </Badge>
+                            )}
+                            {med.refillStatus === 'DENIED' && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] font-mono uppercase px-2 py-0.2 bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30 font-semibold"
+                              >
+                                Refill Denied
+                              </Badge>
+                            )}
                             <span className="text-[11px] font-mono text-muted-foreground">Since {med.startDate}</span>
                           </div>
                           <div className="text-xs font-semibold text-primary font-mono">
@@ -2705,6 +3010,30 @@ export function PatientChartModal({
       isOpen={!!selectedReportOrder}
       onClose={() => setSelectedReportOrder(null)}
       order={selectedReportOrder}
+    />
+
+    {/* Edit Patient Demographics & Known Allergies Modal [FE-801] */}
+    <EditPatientModal
+      isOpen={isEditDemographicsOpen}
+      onClose={() => setIsEditDemographicsOpen(false)}
+      patient={patient}
+      onPatientUpdated={(updated) => {
+        if (patient) {
+          patient.fullName = updated.fullName;
+          patient.firstName = updated.firstName;
+          patient.lastName = updated.lastName;
+          patient.dateOfBirth = updated.dateOfBirth;
+          patient.gender = updated.gender;
+          patient.bloodType = updated.bloodType;
+          patient.phone = updated.phone;
+          patient.primaryPhysician = updated.primaryPhysician;
+          patient.status = updated.status;
+          patient.emergencyContact = updated.emergencyContact;
+          patient.allergies = updated.allergies;
+        }
+        showNotice('success', `Patient demographics & allergies updated. Real-time CDS checks aligned.`);
+        onConsultationSaved?.();
+      }}
     />
   </>
   );

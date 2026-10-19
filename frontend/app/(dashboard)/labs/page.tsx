@@ -24,6 +24,7 @@ import {
   Check,
   Loader2,
   Printer,
+  XCircle,
 } from 'lucide-react';
 import { LabOrder, DiagnosticPriority, DiagnosticStatus, Patient, CreateDiagnosticOrderInput, LabResultItem } from '@/types';
 import {
@@ -70,6 +71,7 @@ import { LabsKpiGrid } from './_components/labs-kpi-grid';
 import { RequisitionModal } from './_components/requisition-modal';
 import { ResultsEntryModal } from './_components/results-entry-modal';
 import { ResultsFindingsModal } from './_components/results-findings-modal';
+import { SpecimenRejectionModal } from './_components/specimen-rejection-modal';
 
 export default function LabsPage() {
   const [orders, setOrders] = useState<LabOrder[]>([]);
@@ -83,6 +85,7 @@ export default function LabsPage() {
   const [selectedOrderForFindings, setSelectedOrderForFindings] = useState<LabOrder | null>(null);
   const [selectedOrderForEntry, setSelectedOrderForEntry] = useState<LabOrder | null>(null);
   const [orderToExport, setOrderToExport] = useState<LabOrder | null>(null);
+  const [orderToReject, setOrderToReject] = useState<LabOrder | null>(null);
   const [isRequisitionOpen, setIsRequisitionOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -319,6 +322,16 @@ export default function LabsPage() {
             className="border-purple-500/30 bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium text-xs py-1 px-2.5"
           >
             Specimen In Lab
+          </Badge>
+        );
+      case 'REJECTED':
+        return (
+          <Badge
+            variant="outline"
+            className="border-destructive/30 bg-destructive/10 text-destructive font-medium text-xs py-1 px-2.5 gap-1.5"
+          >
+            <AlertCircle className="size-3 text-destructive" />
+            <span>Specimen Rejected</span>
           </Badge>
         );
       case 'ORDERED':
@@ -662,25 +675,58 @@ export default function LabsPage() {
                       {/* Column 7: Actions */}
                       <TableCell className="pr-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                          {isPendingCollection ? (
+                          {order.status === 'REJECTED' ? (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleMarkCollected(order)}
-                              className="text-xs h-8 px-3 border-border hover:bg-muted font-medium cursor-pointer"
+                              onClick={() => setSelectedOrderForFindings(order)}
+                              className="text-xs text-destructive hover:bg-destructive/10 h-8 px-2.5 cursor-pointer font-medium border-destructive/30"
+                              title={order.rejectionReason}
                             >
-                              <FlaskConical className="size-3.5 mr-1.5 text-purple-500" />
-                              <span>Collect Specimen</span>
+                              <AlertCircle className="size-3.5 mr-1" />
+                              <span>View Rejection</span>
                             </Button>
+                          ) : isPendingCollection ? (
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleMarkCollected(order)}
+                                className="text-xs h-8 px-3 border-border hover:bg-muted font-medium cursor-pointer"
+                              >
+                                <FlaskConical className="size-3.5 mr-1.5 text-purple-500" />
+                                <span>Collect Specimen</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setOrderToReject(order)}
+                                className="text-xs h-8 px-2 text-destructive hover:bg-destructive/10 font-medium cursor-pointer"
+                                title="Reject Specimen (CLIA Exception)"
+                              >
+                                <XCircle className="size-3.5" />
+                              </Button>
+                            </div>
                           ) : isAwaitingResults ? (
-                            <Button
-                              size="sm"
-                              onClick={() => setSelectedOrderForEntry(order)}
-                              className="text-xs h-8 px-3 gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
-                            >
-                              <Plus className="size-3.5" />
-                              <span>Input Findings</span>
-                            </Button>
+                            <div className="flex items-center gap-1.5">
+                              <Button
+                                size="sm"
+                                onClick={() => setSelectedOrderForEntry(order)}
+                                className="text-xs h-8 px-3 gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+                              >
+                                <Plus className="size-3.5" />
+                                <span>Input Findings</span>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setOrderToReject(order)}
+                                className="text-xs h-8 px-2 text-destructive hover:bg-destructive/10 font-medium cursor-pointer"
+                                title="Reject Specimen (CLIA Exception)"
+                              >
+                                <XCircle className="size-3.5" />
+                              </Button>
+                            </div>
                           ) : (
                             <>
                               <Button
@@ -780,6 +826,17 @@ export default function LabsPage() {
         isOpen={!!orderToExport}
         onClose={() => setOrderToExport(null)}
         order={orderToExport}
+      />
+
+      {/* Specimen Rejection Modal (CLIA/CAP QA Rejection) [FE-803] */}
+      <SpecimenRejectionModal
+        isOpen={!!orderToReject}
+        onClose={() => setOrderToReject(null)}
+        order={orderToReject}
+        onOrderRejected={(rejected) => {
+          setOrders((prev) => prev.map((o) => (o.id === rejected.id ? rejected : o)));
+          showToast('error', `Specimen rejected: ${rejected.rejectionReason}. Recollection protocol initiated.`);
+        }}
       />
 
       {/* Shared Command Palette (⌘K) */}

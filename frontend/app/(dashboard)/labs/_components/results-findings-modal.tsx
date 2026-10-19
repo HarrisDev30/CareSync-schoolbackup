@@ -199,6 +199,29 @@ export function ResultsFindingsModal({
             </div>
           )}
 
+          {/* Specimen Rejection Banner If Rejected */}
+          {order.status === 'REJECTED' && (
+            <div className="p-4 rounded-xl border border-destructive/30 bg-destructive/10 text-destructive space-y-2">
+              <div className="flex items-center gap-2 font-bold text-sm">
+                <AlertCircle className="size-4 shrink-0 text-destructive" />
+                <span>SPECIMEN REJECTED — RECOLLECTION REQUIRED</span>
+              </div>
+              <div className="text-xs text-foreground space-y-1">
+                <div>
+                  <strong className="text-destructive">Rejection Reason:</strong> {order.rejectionReason || 'Specimen compromised.'}
+                </div>
+                {order.rejectedBy && (
+                  <div className="text-muted-foreground font-mono text-[11px]">
+                    Logged by {order.rejectedBy} on {order.rejectedAt ? new Date(order.rejectedAt).toLocaleString() : 'N/A'}
+                  </div>
+                )}
+                <div className="p-2 bg-background/80 rounded border border-destructive/20 text-[11px] text-muted-foreground mt-1">
+                  CLIA Regulatory Notice: The ordered test cannot proceed until a fresh specimen is collected and accessioned by phlebotomy.
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Analyte Findings Table */}
           {results.length > 0 ? (
             <div className="space-y-2">

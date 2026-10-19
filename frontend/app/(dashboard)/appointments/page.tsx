@@ -20,6 +20,7 @@ import {
 import { ConsultationKpiGrid } from './_components/consultation-kpi-grid';
 import { ConsultationTable } from './_components/consultation-table';
 import { BookingModal } from './_components/booking-modal';
+import { RescheduleModal } from './_components/reschedule-modal';
 import { PatientChartModal } from '../patients/_components/patient-chart-modal';
 import { CommandMenu } from '@/components/command-menu';
 import {
@@ -51,6 +52,7 @@ export default function AppointmentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [selectedChartPatient, setSelectedChartPatient] = useState<Patient | null>(null);
+  const [reschedulingApt, setReschedulingApt] = useState<Appointment | null>(null);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [, startTransition] = useTransition();
 
@@ -348,6 +350,7 @@ export default function AppointmentsPage() {
           <ConsultationTable
             appointments={filteredAppointments}
             onOpenChart={handleOpenChartForAppointment}
+            onReschedule={(apt) => setReschedulingApt(apt)}
             onStatusChange={handleStatusChange}
           />
         </CardContent>
@@ -360,6 +363,23 @@ export default function AppointmentsPage() {
         patients={patients}
         appointments={appointments}
         onBook={handleBookAppointment}
+      />
+
+      {/* Reschedule Consultation Modal */}
+      <RescheduleModal
+        isOpen={!!reschedulingApt}
+        onClose={() => setReschedulingApt(null)}
+        appointment={reschedulingApt}
+        onRescheduled={(updated) => {
+          setAppointments((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+          showToast(
+            'success',
+            `Consultation for ${updated.patientName} rescheduled to ${new Date(updated.scheduledAt).toLocaleDateString()} at ${new Date(updated.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
+          );
+          startTransition(() => {
+            loadData();
+          });
+        }}
       />
 
       {/* Patient EHR Chart Modal */}

@@ -20,16 +20,18 @@ import {
   Phone,
   ChevronLeft,
   ChevronRight,
+  Edit3,
 } from 'lucide-react';
 
 interface PatientTableProps {
   patients: Patient[];
   onViewChart: (patient: Patient) => void;
+  onEditPatient?: (patient: Patient) => void;
 }
 
 const PAGE_SIZE = 10;
 
-export function PatientTable({ patients, onViewChart }: PatientTableProps) {
+export function PatientTable({ patients, onViewChart, onEditPatient }: PatientTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Reset to page 1 whenever filtered patients list changes length
@@ -182,22 +184,39 @@ export function PatientTable({ patients, onViewChart }: PatientTableProps) {
 
                     {/* Column 6: Status & Contextual Button */}
                     <TableCell className="pr-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2.5">
+                      <div className="flex items-center justify-end gap-2">
                         <span className="group-hover:hidden">
                           {renderStatusBadge(p.status)}
                         </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onViewChart(p);
-                          }}
-                          className="hidden group-hover:inline-flex h-8 px-3 text-xs font-medium text-foreground shadow-none cursor-pointer"
-                        >
-                          <FileText className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
-                          View Chart
-                        </Button>
+                        <div className="hidden group-hover:flex items-center gap-1.5">
+                          {onEditPatient && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditPatient(p);
+                              }}
+                              className="h-8 px-2 text-xs font-medium text-muted-foreground hover:text-foreground shadow-none cursor-pointer"
+                              title="Edit patient profile & demographics"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 mr-1" />
+                              <span>Edit</span>
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewChart(p);
+                            }}
+                            className="h-8 px-3 text-xs font-medium text-foreground shadow-none cursor-pointer"
+                          >
+                            <FileText className="w-3.5 h-3.5 mr-1 text-muted-foreground" />
+                            View Chart
+                          </Button>
+                        </div>
                       </div>
                     </TableCell>
                   </TableRow>

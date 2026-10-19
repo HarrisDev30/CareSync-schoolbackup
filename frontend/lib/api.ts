@@ -1,8 +1,10 @@
 import {
   Patient,
   CreatePatientInput,
+  UpdatePatientInput,
   Appointment,
   CreateAppointmentInput,
+  RescheduleAppointmentInput,
   LabOrder,
   CreateDiagnosticOrderInput,
   DiagnosticStatus,
@@ -15,7 +17,9 @@ import {
   AuditLogEntry,
   StaffUser,
   PatientVital,
+  RecordVitalSignsInput,
   PatientMedication,
+  PrescriptionRefillRequest,
   PatientStatus,
   CreatePrescriptionInput,
   DischargeSummary,
@@ -455,6 +459,33 @@ let localAppointments: Appointment[] = [...INITIAL_APPOINTMENTS];
 let localLabs: LabOrder[] = [...INITIAL_LABS];
 let localAuditLogs: AuditLogEntry[] = [...INITIAL_AUDIT_LOGS];
 
+export const PATIENTS_STORAGE_KEY = 'caresync_local_patients';
+
+export function getStoredPatients(): Patient[] {
+  if (typeof window === 'undefined') return [...localPatients];
+  try {
+    const saved = localStorage.getItem(PATIENTS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // Fallback
+  }
+  return [...localPatients];
+}
+
+export function saveStoredPatients(patients: Patient[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PATIENTS_STORAGE_KEY, JSON.stringify(patients));
+  } catch {
+    // Ignore storage write errors
+  }
+}
+
 const APPOINTMENTS_STORAGE_KEY = 'caresync_local_appointments';
 
 export function getStoredAppointments(): Appointment[] {
@@ -595,7 +626,7 @@ export async function fetchPatients(searchQuery?: string, bloodTypeFilter?: stri
     // Use fallback
   }
 
-  let filtered = [...localPatients];
+  let filtered = [...getStoredPatients()];
   if (searchQuery) {
     const q = searchQuery.toLowerCase();
     filtered = filtered.filter(
@@ -669,13 +700,15 @@ export async function createPatient(input: CreatePatientInput): Promise<{ succes
         createdAt: saved.createdAt || new Date().toISOString(),
       };
       localPatients = [newPatient, ...localPatients];
+      saveStoredPatients(localPatients);
       return { success: true, data: newPatient };
     }
   } catch {
     // Local fallback
   }
 
-  const nextSeq = String(localPatients.length + 90215);
+  const currentPatients = getStoredPatients();
+  const nextSeq = String(currentPatients.length + 90215);
   const newPatient: Patient = {
     id: `p-${Date.now()}`,
     mrn: `MRN-${nextSeq}`,
@@ -694,8 +727,92 @@ export async function createPatient(input: CreatePatientInput): Promise<{ succes
     createdAt: new Date().toISOString(),
   };
 
-  localPatients = [newPatient, ...localPatients];
+  const updatedPatients = [newPatient, ...currentPatients];
+  localPatients = updatedPatients;
+  saveStoredPatients(updatedPatients);
   return { success: true, data: newPatient };
+}
+
+export async function updatePatient(
+  id: string,
+  input: UpdatePatientInput,
+): Promise<{ success: boolean; data?: Patient; error?: string }> {
+  const currentStaff = getActiveStaffUser();
+  const existing = getStoredPatients();
+  const target = existing.find((p) => p.id === id || p.mrn === id);
+  if (!target) {
+    return { success: false, error: 'Patient record not found.' };
+  }
+
+  const updatedPatient: Patient = {
+    ...target,
+    ...(input.firstName !== undefined ? { firstName: input.firstName.trim() } : {}),
+    ...(input.lastName !== undefined ? { lastName: input.lastName.trim() } : {}),
+    ...(input.firstName || input.lastName
+      ? { fullName: `${(input.firstName || target.firstName).trim()} ${(input.lastName || target.lastName).trim()}` }
+      : {}),
+    ...(input.dateOfBirth !== undefined ? { dateOfBirth: input.dateOfBirth, age: calculateAge(input.dateOfBirth) } : {}),
+    ...(input.gender !== undefined ? { gender: input.gender } : {}),
+    ...(input.bloodType !== undefined ? { bloodType: input.bloodType } : {}),
+    ...(input.phone !== undefined || input.phoneNumber !== undefined ? { phone: input.phone || input.phoneNumber || target.phone } : {}),
+    ...(input.primaryPhysician !== undefined ? { primaryPhysician: input.primaryPhysician } : {}),
+    ...(input.allergies !== undefined || input.knownAllergies !== undefined
+      ? { allergies: input.allergies || input.knownAllergies || [] }
+      : {}),
+    ...(input.emergencyContact !== undefined || input.emergencyContactName !== undefined
+      ? {
+          emergencyContact: input.emergencyContact || (input.emergencyContactName ? `${input.emergencyContactName} — ${input.emergencyContactPhone || ''}` : target.emergencyContact),
+        }
+      : {}),
+    ...(input.status !== undefined ? { status: input.status } : {}),
+  };
+
+  try {
+    const token = await getValidAuthToken();
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    await fetch(`${API_BASE_URL}/patients/${target.id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({
+        firstName: updatedPatient.firstName,
+        lastName: updatedPatient.lastName,
+        dateOfBirth: updatedPatient.dateOfBirth,
+        gender: updatedPatient.gender === 'Female' ? 'FEMALE' : updatedPatient.gender === 'Male' ? 'MALE' : 'OTHER',
+        bloodType: updatedPatient.bloodType,
+        phoneNumber: updatedPatient.phone,
+        emergencyContactName: input.emergencyContactName,
+        emergencyContactPhone: input.emergencyContactPhone,
+        knownAllergies: updatedPatient.allergies,
+      }),
+    });
+  } catch {
+    // local fallback
+  }
+
+  const updatedList = existing.map((p) => (p.id === target.id ? updatedPatient : p));
+  saveStoredPatients(updatedList);
+  localPatients = updatedList;
+
+  recordAuditLogEntry({
+    action: 'PATIENT_RECORD_UPDATED',
+    resource: 'patients',
+    resourceId: target.id,
+    userId: currentStaff.id,
+    userEmail: currentStaff.email,
+    userRole: currentStaff.role,
+    ipAddress: '192.168.1.42',
+    metadata: {
+      patientId: target.id,
+      mrn: target.mrn,
+      patientName: updatedPatient.fullName,
+      updatedFields: Object.keys(input),
+      allergies: updatedPatient.allergies,
+    },
+  });
+
+  return { success: true, data: updatedPatient };
 }
 
 export async function fetchAppointments(): Promise<Appointment[]> {
@@ -875,6 +992,53 @@ export async function updateAppointmentStatus(
   saveStoredAppointments(updatedList);
   const found = updatedList.find((a) => a.id === id);
   return { success: true, data: found };
+}
+
+export async function rescheduleAppointment(
+  appointmentId: string,
+  input: RescheduleAppointmentInput,
+): Promise<{ success: boolean; data?: Appointment; error?: string }> {
+  const currentStaff = getActiveStaffUser();
+  const existing = getStoredAppointments();
+  const target = existing.find((a) => a.id === appointmentId);
+  if (!target) {
+    return { success: false, error: 'Appointment record not found.' };
+  }
+
+  const updatedAppointment: Appointment = {
+    ...target,
+    scheduledAt: input.scheduledAt || target.scheduledAt,
+    durationMinutes: input.durationMinutes || target.durationMinutes,
+    physicianId: input.physicianId || target.physicianId,
+    physicianName: input.physicianName || target.physicianName,
+    roomNumber: input.roomNumber || target.roomNumber,
+    reason: input.reason || target.reason,
+    notes: input.notes || target.notes,
+  };
+
+  const updatedList = existing.map((a) => (a.id === appointmentId ? updatedAppointment : a));
+  saveStoredAppointments(updatedList);
+
+  recordAuditLogEntry({
+    action: 'APPOINTMENT_RESCHEDULED',
+    resource: 'appointments',
+    resourceId: appointmentId,
+    userId: currentStaff.id,
+    userEmail: currentStaff.email,
+    userRole: currentStaff.role,
+    ipAddress: '192.168.1.25',
+    metadata: {
+      patientId: target.patientId,
+      patientName: target.patientName,
+      previousScheduledAt: target.scheduledAt,
+      newScheduledAt: updatedAppointment.scheduledAt,
+      roomNumber: updatedAppointment.roomNumber,
+      physicianName: updatedAppointment.physicianName,
+      reason: updatedAppointment.reason,
+    },
+  });
+
+  return { success: true, data: updatedAppointment };
 }
 
 export async function cancelAppointment(
@@ -1239,6 +1403,54 @@ export async function reviewDiagnosticResult(
   return { success: true, data: found };
 }
 
+export async function rejectDiagnosticSpecimen(
+  orderId: string,
+  rejectionReason: string,
+  notes?: string,
+): Promise<{ success: boolean; data?: LabOrder; error?: string }> {
+  if (!rejectionReason?.trim()) {
+    return { success: false, error: 'CLIA/CAP regulatory rejection reason is required.' };
+  }
+  const currentStaff = getActiveStaffUser();
+  const current = getStoredLabOrders();
+  const target = current.find((o) => o.id === orderId);
+  if (!target) {
+    return { success: false, error: 'Laboratory specimen order not found.' };
+  }
+
+  const updatedOrder: LabOrder = {
+    ...target,
+    status: 'REJECTED' as DiagnosticStatus,
+    rejectionReason: rejectionReason.trim(),
+    rejectedBy: currentStaff.fullName,
+    rejectedAt: new Date().toISOString(),
+    resultSummary: `SPECIMEN REJECTED: ${rejectionReason.trim()}. Immediate recollection required.${notes ? ` (${notes.trim()})` : ''}`,
+  };
+
+  const updatedList = current.map((o) => (o.id === orderId ? updatedOrder : o));
+  saveStoredLabOrders(updatedList);
+
+  recordAuditLogEntry({
+    action: 'DIAGNOSTIC_SPECIMEN_REJECTED',
+    resource: 'diagnostics',
+    resourceId: orderId,
+    userId: currentStaff.id,
+    userEmail: currentStaff.email,
+    userRole: currentStaff.role,
+    ipAddress: '192.168.1.18',
+    metadata: {
+      orderNumber: target.orderNumber,
+      testName: target.testName,
+      patientId: target.patientId,
+      rejectionReason: rejectionReason.trim(),
+      notes: notes?.trim(),
+      cliaRecollectionNoticeDispatched: true,
+    },
+  });
+
+  return { success: true, data: updatedOrder };
+}
+
 const INITIAL_CONSULTATIONS: Consultation[] = [
   {
     id: 'con-1',
@@ -1547,6 +1759,82 @@ export const ELEANOR_VITALS: PatientVital[] = [
   },
 ];
 
+export const VITALS_STORAGE_KEY = 'caresync_local_vitals';
+
+export function getStoredVitals(patientId?: string): PatientVital[] {
+  if (typeof window === 'undefined') return [...ELEANOR_VITALS];
+  try {
+    const key = patientId ? `${VITALS_STORAGE_KEY}_${patientId}` : VITALS_STORAGE_KEY;
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch {
+    // fallback
+  }
+  return [...ELEANOR_VITALS];
+}
+
+export function saveStoredVitals(patientId: string, vitals: PatientVital[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const key = patientId ? `${VITALS_STORAGE_KEY}_${patientId}` : VITALS_STORAGE_KEY;
+    localStorage.setItem(key, JSON.stringify(vitals));
+  } catch {
+    // ignore
+  }
+}
+
+export async function recordPatientVitals(
+  input: RecordVitalSignsInput,
+): Promise<{ success: boolean; data?: PatientVital; error?: string }> {
+  if (!input.systolic || !input.diastolic || !input.heartRate || !input.temperature) {
+    return { success: false, error: 'Systolic, diastolic, heart rate, and temperature are required.' };
+  }
+  const currentStaff = getActiveStaffUser();
+  const newVital: PatientVital = {
+    id: `vit-${Date.now()}`,
+    recordedAt: new Date().toISOString(),
+    bloodPressure: `${input.systolic}/${input.diastolic} mmHg`,
+    heartRate: input.heartRate,
+    oxygenSaturation: input.oxygenSaturation,
+    temperature: input.temperature,
+    respiratoryRate: input.respiratoryRate || 16,
+    weightKg: input.weightKg,
+    painScore: input.painScore ?? 0,
+    recordedBy: input.recordedBy || currentStaff.fullName,
+    notes: input.notes || 'Routine outpatient clinical vital intake.',
+  };
+
+  const existing = getStoredVitals(input.patientId);
+  const updated = [newVital, ...existing];
+  saveStoredVitals(input.patientId, updated);
+
+  recordAuditLogEntry({
+    action: 'VITAL_SIGNS_RECORDED',
+    resource: 'vitals',
+    resourceId: newVital.id,
+    userId: currentStaff.id,
+    userEmail: currentStaff.email,
+    userRole: currentStaff.role,
+    ipAddress: '192.168.1.42',
+    metadata: {
+      patientId: input.patientId,
+      bloodPressure: newVital.bloodPressure,
+      heartRate: newVital.heartRate,
+      oxygenSaturation: newVital.oxygenSaturation,
+      temperature: newVital.temperature,
+      painScore: newVital.painScore,
+      recordedBy: newVital.recordedBy,
+    },
+  });
+
+  return { success: true, data: newVital };
+}
+
 export const ELEANOR_MEDICATIONS: PatientMedication[] = [
   {
     id: 'med-1',
@@ -1557,6 +1845,9 @@ export const ELEANOR_MEDICATIONS: PatientMedication[] = [
     startDate: '2025-11-04',
     instructions: 'Take orally once per day at bedtime. Avoid excessive grapefruit consumption.',
     status: 'Active',
+    refillStatus: 'PENDING',
+    refillRequestedAt: '2026-10-18T14:30:00Z',
+    refillNotes: 'Patient submitted 30-day renewal request via Outpatient Portal.',
   },
   {
     id: 'med-2',
@@ -1625,7 +1916,7 @@ export async function fetchPatientPortalData(mrn = 'MRN-90214') {
     },
     appointments,
     labOrders,
-    vitals: ELEANOR_VITALS,
+    vitals: getStoredVitals(patient?.id),
     medications: getStoredMedications(patient?.id),
   };
 }
@@ -2814,6 +3105,173 @@ export async function restoreStaffAccess(
   });
 
   return { success: true, data: updatedAccount };
+}
+
+export const REFILLS_STORAGE_KEY = 'caresync_local_refills';
+
+export const INITIAL_REFILL_REQUESTS: PrescriptionRefillRequest[] = [
+  {
+    id: 'refill-init-1',
+    patientId: 'p-1',
+    patientName: 'Eleanor Vance',
+    patientMrn: 'MRN-90214',
+    medicationId: 'med-1',
+    medicationName: 'Atorvastatin (Lipitor)',
+    dosage: '20 mg',
+    prescribedBy: 'Dr. Sarah Chen, MD',
+    requestedAt: '2026-10-18T14:30:00Z',
+    status: 'PENDING',
+    notes: 'Patient submitted 30-day renewal request via Outpatient Portal. Maintenance supply remaining: 4 days.',
+  },
+];
+
+export function getStoredRefillRequests(): PrescriptionRefillRequest[] {
+  if (typeof window === 'undefined') return [...INITIAL_REFILL_REQUESTS];
+  try {
+    const saved = localStorage.getItem(REFILLS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {
+    // ignore
+  }
+  return [...INITIAL_REFILL_REQUESTS];
+}
+
+export function saveStoredRefillRequests(requests: PrescriptionRefillRequest[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(REFILLS_STORAGE_KEY, JSON.stringify(requests));
+  } catch {
+    // ignore
+  }
+}
+
+export async function requestPrescriptionRefill(
+  patientId: string,
+  medicationId: string,
+  notes?: string,
+): Promise<{ success: boolean; data?: PrescriptionRefillRequest; error?: string }> {
+  const currentStaff = getActiveStaffUser();
+  const meds = getStoredMedications(patientId);
+  const targetMed = meds.find((m) => m.id === medicationId);
+  if (!targetMed) {
+    return { success: false, error: 'Medication prescription not found.' };
+  }
+
+  // Update medication state
+  const updatedMeds = meds.map((m) =>
+    m.id === medicationId
+      ? {
+          ...m,
+          refillStatus: 'PENDING' as const,
+          refillRequestedAt: new Date().toISOString(),
+          refillNotes: notes,
+        }
+      : m,
+  );
+  saveStoredMedications(updatedMeds);
+
+  const allPatients = getStoredPatients();
+  const patient = allPatients.find((p) => p.id === patientId || p.mrn === patientId);
+  const patientName = patient?.fullName || 'Eleanor Vance';
+  const patientMrn = patient?.mrn || 'MRN-90214';
+
+  const refillRequest: PrescriptionRefillRequest = {
+    id: `refill-${Date.now()}`,
+    patientId,
+    patientName,
+    patientMrn,
+    medicationId,
+    medicationName: targetMed.name,
+    dosage: targetMed.dosage,
+    prescribedBy: targetMed.prescribedBy,
+    requestedAt: new Date().toISOString(),
+    status: 'PENDING',
+    notes: notes || 'Patient requested standard 30-day maintenance supply renewal.',
+  };
+
+  const existingRequests = getStoredRefillRequests();
+  const updatedRequests = [refillRequest, ...existingRequests.filter((r) => r.medicationId !== medicationId)];
+  saveStoredRefillRequests(updatedRequests);
+
+  recordAuditLogEntry({
+    action: 'PRESCRIPTION_REFILL_REQUESTED',
+    resource: 'prescriptions',
+    resourceId: medicationId,
+    userId: currentStaff.id,
+    userEmail: currentStaff.email,
+    userRole: currentStaff.role,
+    ipAddress: '192.168.1.50',
+    metadata: {
+      patientId,
+      medicationName: targetMed.name,
+      dosage: targetMed.dosage,
+      refillId: refillRequest.id,
+      notes,
+    },
+  });
+
+  return { success: true, data: refillRequest };
+}
+
+export async function reviewPrescriptionRefill(
+  refillId: string,
+  action: 'APPROVE' | 'DENY',
+  reviewNotes?: string,
+): Promise<{ success: boolean; data?: PrescriptionRefillRequest; error?: string }> {
+  const currentStaff = getActiveStaffUser();
+  const requests = getStoredRefillRequests();
+  const targetRefill = requests.find((r) => r.id === refillId);
+  if (!targetRefill) {
+    return { success: false, error: 'Refill authorization request not found.' };
+  }
+
+  const updatedRefill: PrescriptionRefillRequest = {
+    ...targetRefill,
+    status: action === 'APPROVE' ? 'APPROVED' : 'DENIED',
+    reviewedBy: currentStaff.fullName,
+    reviewedAt: new Date().toISOString(),
+    reviewNotes: reviewNotes || (action === 'APPROVE' ? 'Approved 30-day maintenance supply.' : 'Denied. Clinical consult required.'),
+  };
+
+  const updatedRequests = requests.map((r) => (r.id === refillId ? updatedRefill : r));
+  saveStoredRefillRequests(updatedRequests);
+
+  // Also update medication record
+  const meds = getStoredMedications(targetRefill.patientId);
+  const updatedMeds = meds.map((m) => {
+    if (m.id === targetRefill.medicationId) {
+      return {
+        ...m,
+        refillStatus: updatedRefill.status,
+        status: action === 'APPROVE' ? ('Active' as const) : m.status,
+        refillNotes: reviewNotes,
+      };
+    }
+    return m;
+  });
+  saveStoredMedications(updatedMeds);
+
+  recordAuditLogEntry({
+    action: action === 'APPROVE' ? 'PRESCRIPTION_REFILL_APPROVED' : 'PRESCRIPTION_REFILL_DENIED',
+    resource: 'prescriptions',
+    resourceId: targetRefill.medicationId,
+    userId: currentStaff.id,
+    userEmail: currentStaff.email,
+    userRole: currentStaff.role,
+    ipAddress: '192.168.1.42',
+    metadata: {
+      refillId,
+      patientId: targetRefill.patientId,
+      medicationName: targetRefill.medicationName,
+      decision: action,
+      reviewNotes: updatedRefill.reviewNotes,
+    },
+  });
+
+  return { success: true, data: updatedRefill };
 }
 
 

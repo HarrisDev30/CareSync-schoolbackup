@@ -27,11 +27,13 @@ import {
   FileText,
   UserCheck,
   PhoneCall,
+  RotateCcw,
 } from 'lucide-react';
 
 export interface ConsultationTableProps {
   appointments: Appointment[];
   onOpenChart: (apt: Appointment) => void;
+  onReschedule?: (apt: Appointment) => void;
   onStatusChange: (
     aptId: string,
     newStatus: AppointmentStatus,
@@ -45,6 +47,7 @@ const PAGE_SIZE = 10;
 export function ConsultationTable({
   appointments,
   onOpenChart,
+  onReschedule,
   onStatusChange,
 }: ConsultationTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -215,7 +218,20 @@ export function ConsultationTable({
 
                     {/* 5. Triage Action Button */}
                     <TableCell className="pr-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        {onReschedule && (apt.status === 'SCHEDULED' || apt.status === 'CONFIRMED') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onReschedule(apt)}
+                            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground font-medium cursor-pointer"
+                            title="Reschedule appointment date/time or suite"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                            <span>Reschedule</span>
+                          </Button>
+                        )}
+
                         {apt.status === 'CONFIRMED' && (
                           <Button
                             size="sm"

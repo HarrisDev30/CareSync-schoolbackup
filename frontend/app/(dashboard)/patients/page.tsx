@@ -13,6 +13,7 @@ import {
 import { PatientTable } from './_components/patient-table';
 import { PatientKpiGrid } from './_components/patient-kpi-grid';
 import { PatientRegistrationModal } from './_components/patient-registration-modal';
+import { EditPatientModal } from './_components/edit-patient-modal';
 import { PatientChartModal } from './_components/patient-chart-modal';
 import { CommandMenu } from '@/components/command-menu';
 import { fetchPatients, createPatient } from '@/lib/api';
@@ -45,6 +46,7 @@ export default function PatientsPage() {
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [selectedChartPatient, setSelectedChartPatient] = useState<Patient | null>(null);
+  const [selectedPatientForEdit, setSelectedPatientForEdit] = useState<Patient | null>(null);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [, startTransition] = useTransition();
 
@@ -289,6 +291,7 @@ export default function PatientsPage() {
           <PatientTable
             patients={filteredPatients}
             onViewChart={(patient) => setSelectedChartPatient(patient)}
+            onEditPatient={(patient) => setSelectedPatientForEdit(patient)}
           />
         </CardContent>
       </Card>
@@ -307,6 +310,21 @@ export default function PatientsPage() {
         onClose={() => setIsRegisterModalOpen(false)}
         onSubmit={handleRegisterPatient}
       />
+
+      {/* Edit Patient Demographics Modal */}
+      {selectedPatientForEdit && (
+        <EditPatientModal
+          isOpen={!!selectedPatientForEdit}
+          onClose={() => setSelectedPatientForEdit(null)}
+          patient={selectedPatientForEdit}
+          onPatientUpdated={(updated) => {
+            showToast('success', `Demographics updated for ${updated.fullName} (${updated.mrn}).`);
+            startTransition(() => {
+              loadPatients(searchQuery, bloodTypeFilter);
+            });
+          }}
+        />
+      )}
 
       {/* Patient Chart Modal */}
       <PatientChartModal
