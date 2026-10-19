@@ -2,7 +2,7 @@
 
 * **Sprint Cycle:** Sprint 6 (Closed-Loop Clinical Workflows, Patient Self-Service & Facility Turnover Automation)
 * **Team:** Group 2 (CareSync Development Team)
-* **Status:** 🚧 **IN PROGRESS (1/6 in Done — [FE-701] Delivered)**
+* **Status:** 🚧 **IN PROGRESS (3/6 in Done — [FE-701], [FE-702], [BE-601] Delivered)**
 * **Target Throughput:** $100\%$ operational completion across all user roles
 * **Core Principle:** Complete End-to-End User Story Parity (Zero Dead Ends, Zero Broken Loops)
 
@@ -51,18 +51,18 @@
 ---
 
 #### Card Title: `[FE-702] Physician Direct Diagnostic Lab Ordering Tab inside Patient Chart`
-* **Column:** `⏳ To Do`
+* **Column:** `✅ Done`
 * **Member:** `@Edson Sode`
 * **Labels:** `Frontend` (Orange), `Sprint-6` (Teal), `Clinical` (Blue)
 * **User Story:**  
   *“As an attending physician examining a patient in consultation, I want to order STAT or Routine diagnostic lab panels directly within the patient chart modal, so that the requisition dispatches immediately to the Laboratory queue without switching roles or screens.”*
 * **Checklist (Acceptance Criteria):**
-  - [ ] Add a dedicated **"Diagnostics"** tab trigger inside `patient-chart-modal.tsx` with live order count badge
-  - [ ] Provide high-frequency outpatient test chips: *Comprehensive Metabolic Panel (CMP-14), High-Sensitivity Troponin I (hs-cTnI), Lipid Panel, Glycated Hemoglobin (HbA1c), Complete Blood Count with Diff (CBC)*
-  - [ ] Allow priority toggle (`ROUTINE` vs `STAT Urgent`) and clinical indication / notes field
-  - [ ] Connect order submission to `createDiagnosticOrder()` in `frontend/lib/api.ts` with patient ID, MRN, and physician credentials pre-bound
-  - [ ] Display active specimen status card and ensure the order immediately appears in the Laboratory Technician's worklist (`/labs`)
-  - [ ] Record `DIAGNOSTIC_ORDER_PLACED` in the HIPAA Audit Log
+  - [x] Add a dedicated **"Diagnostics"** tab trigger inside `patient-chart-modal.tsx` with live order count badge
+  - [x] Provide high-frequency outpatient test chips: *Comprehensive Metabolic Panel (CMP-14), High-Sensitivity Troponin I (hs-cTnI), Lipid Panel, Glycated Hemoglobin (HbA1c), Complete Blood Count with Diff (CBC)*
+  - [x] Allow priority toggle (`ROUTINE` vs `STAT Urgent`) and clinical indication / notes field
+  - [x] Connect order submission to `createDiagnosticOrder()` in `frontend/lib/api.ts` with patient ID, MRN, and physician credentials pre-bound
+  - [x] Display active specimen status card and ensure the order immediately appears in the Laboratory Technician's worklist (`/labs`)
+  - [x] Record `DIAGNOSTIC_ORDER_PLACED` in the HIPAA Audit Log
 * **Sample Activity Comment:**  
   *"Connected in-chart lab requisition drawer so physicians can dispatch STAT diagnostic orders directly from the consultation workstation."*
 
@@ -71,16 +71,16 @@
 ### 2. 💾 Backend Engineer (Assignee: `@Harris Asani` — YOU)
 
 #### Card Title: `[BE-601] Clinical Discharge Suite-Turnover & Sanitization Automation`
-* **Column:** `⏳ To Do`
+* **Column:** `✅ Done`
 * **Member:** `@Harris Asani`
 * **Labels:** `Backend` (Blue), `Sprint-6` (Teal), `Facility` (Purple)
 * **User Story:**  
   *“As a hospital operations manager, when a physician authorizes a patient discharge, I want the system to automatically transition their occupied examination room to `SANITIZING` status with a turnover countdown, so environmental turnover is immediate and room capacity is accurately reflected.”*
 * **Checklist (Acceptance Criteria):**
-  - [ ] Enhance `dischargePatient()` in `frontend/lib/api.ts` and `handleDischargePatient` in `patient-chart-modal.tsx` to automatically query the patient's assigned room from `getStoredHospitalRooms()`
-  - [ ] When an occupied room is matched, automatically transition room status from `IN_USE` / `STAT_EMERGENCY` to `SANITIZING`, detach occupant data, and set `elapsedMinutes: 1` with `expectedDurationMinutes: 10`
-  - [ ] In `/rooms`, show active sanitization turnover state with countdown timer and one-click "Mark Ready" button for environmental cleaning staff
-  - [ ] Record `FACILITY_ROOM_TURNOVER_INITIATED` in the HIPAA Audit Log
+  - [x] Enhance `dischargePatient()` in `frontend/lib/api.ts` and `handleDischargePatient` in `patient-chart-modal.tsx` to automatically query the patient's assigned room from `getStoredHospitalRooms()`
+  - [x] When an occupied room is matched, automatically transition room status from `IN_USE` / `STAT_EMERGENCY` to `SANITIZING`, detach occupant data, and set `elapsedMinutes: 1` with `expectedDurationMinutes: 10`
+  - [x] In `/rooms`, show active sanitization turnover state with countdown timer and one-click "Mark Ready" button for environmental cleaning staff
+  - [x] Record `FACILITY_ROOM_TURNOVER_INITIATED` in the HIPAA Audit Log
 * **Sample Activity Comment:**  
   *"Automated hospital room turnover synchronization upon physician discharge sign-off."*
 

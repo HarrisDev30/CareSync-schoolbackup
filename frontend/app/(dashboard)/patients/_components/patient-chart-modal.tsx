@@ -24,6 +24,9 @@ import {
   RefreshCw,
   Pill,
   FileCheck,
+  FlaskConical,
+  Check,
+  Loader2,
 } from 'lucide-react';
 import {
   Patient,
@@ -32,6 +35,7 @@ import {
   CreateConsultationInput,
   PatientMedication,
   DischargeSummary,
+  LabOrder,
 } from '@/types';
 import {
   Dialog,
@@ -65,6 +69,8 @@ import {
   createPrescription,
   dischargePatient,
   getStoredDischargeSummary,
+  fetchLabOrders,
+  createDiagnosticOrder,
 } from '@/lib/api';
 import { evaluatePrescriptionSafety, CdsEvaluationResult } from '@/lib/cds-engine';
 import { MedicalRecordExportModal } from '@/components/medical-record-export-modal';
@@ -97,6 +103,58 @@ const RX_PRESETS = [
   { name: 'Ibuprofen (NSAID)', dosage: '600 mg', freq: 'Every 8 hours with food', sig: 'Take with food to minimize GI discomfort. Max 2400 mg/day.' },
   { name: 'Albuterol Inhaler', dosage: '90 mcg/actuation', freq: 'As needed (PRN)', sig: 'Inhale 2 puffs every 4-6 hours as needed for bronchospasm/wheezing.' },
   { name: 'Omeprazole', dosage: '20 mg', freq: 'Once daily before breakfast', sig: 'Take 1 capsule orally once daily 30 minutes before morning meal.' },
+];
+
+// Diagnostic Lab Panel Presets [FE-702]
+const LAB_TEST_PRESETS = [
+  {
+    name: 'Comprehensive Metabolic Panel (CMP)',
+    category: 'General Chemistry',
+    specimen: 'Serum / Plasma',
+    description: 'Electrolytes (Na, K, Cl), Renal (eGFR, BUN, Creatinine), Hepatic enzymes (ALT, AST, ALP), and Glucose.',
+  },
+  {
+    name: 'Complete Blood Count (CBC) with Diff',
+    category: 'Hematology',
+    specimen: 'Whole Blood (EDTA)',
+    description: 'WBC differential count, Hemoglobin, Hematocrit, RBC morphology indices, and Platelets.',
+  },
+  {
+    name: 'Cardiac Troponin I (hs-cTnI High Sensitivity)',
+    category: 'Cardiology Biomarkers',
+    specimen: 'Plasma (Lithium Heparin)',
+    description: 'Ultra-sensitive myocardial injury biomarker for acute coronary syndrome and myocardial ischemia.',
+  },
+  {
+    name: 'Lipid Profile & Atherogenic Risk Panel',
+    category: 'Cardiovascular Chemistry',
+    specimen: 'Serum',
+    description: 'Total Cholesterol, Direct LDL-C, HDL-C, Triglycerides, and Non-HDL Atherogenic Ratio.',
+  },
+  {
+    name: 'Glycated Hemoglobin (HbA1c)',
+    category: 'Endocrinology',
+    specimen: 'Whole Blood (EDTA)',
+    description: '90-day glycemic control index and diabetes monitoring biomarker.',
+  },
+  {
+    name: 'Urinalysis with Microscopic Examination',
+    category: 'Renal & Urology',
+    specimen: 'Clean Catch Midstream Urine',
+    description: 'Specific gravity, Protein, Glucose, Ketones, Bilirubin, Leukocyte Esterase, and Microscopic Sediment.',
+  },
+  {
+    name: 'Serum Ferritin & Iron Binding Capacity',
+    category: 'Hematology / Metabolism',
+    specimen: 'Serum',
+    description: 'Ferritin, Serum Iron, Total Iron Binding Capacity (TIBC), and Transferrin Saturation.',
+  },
+  {
+    name: 'Chest Radiography (PA & Lateral X-Ray)',
+    category: 'Radiology / Imaging',
+    specimen: 'Diagnostic Imaging',
+    description: 'Standard 2-view thoracic imaging for parenchymal infiltrates, effusion, and cardiomegaly.',
+  },
 ];
 
 // Clinical Evaluation Helpers
@@ -185,7 +243,7 @@ export function PatientChartModal({
   onConsultationSaved,
 }: PatientChartModalProps) {
   // Tabs & Navigation
-  const [activeTab, setActiveTab] = useState<'history' | 'soap' | 'vitals' | 'prescriptions' | 'demographics'>('history');
+  const [activeTab, setActiveTab] = useState<'history' | 'soap' | 'vitals' | 'diagnostics' | 'prescriptions' | 'demographics'>('history');
 
   // Export Modal State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -195,6 +253,15 @@ export function PatientChartModal({
   const [isLoadingNotes, setIsLoadingNotes] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notice, setNotice] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Diagnostics Lab Orders State [FE-702]
+  const [patientLabOrders, setPatientLabOrders] = useState<LabOrder[]>([]);
+  const [isLoadingLabOrders, setIsLoadingLabOrders] = useState(false);
+  const [selectedTestName, setSelectedTestName] = useState('');
+  const [selectedTestCategory, setSelectedTestCategory] = useState('General Chemistry');
+  const [labPriority, setLabPriority] = useState<'ROUTINE' | 'STAT'>('ROUTINE');
+  const [clinicalIndication, setClinicalIndication] = useState('');
+  const [isSubmittingLabOrder, setIsSubmittingLabOrder] = useState(false);
 
   // Medications & E-Prescriptions State
   const [medications, setMedications] = useState<PatientMedication[]>([]);
@@ -245,7 +312,27 @@ export function PatientChartModal({
   const [amendTreatmentPlan, setAmendTreatmentPlan] = useState('');
   const [expandedLedgerNoteId, setExpandedLedgerNoteId] = useState<string | null>(null);
 
-  // Load consultations, medications, and discharge status when patient opens
+  // Diagnostic Lab Orders Fetcher [FE-702]
+  const loadLabOrders = async () => {
+    if (!patient) return;
+    setIsLoadingLabOrders(true);
+    try {
+      const allOrders = await fetchLabOrders();
+      const filtered = allOrders.filter(
+        (o) =>
+          o.patientId === patient.id ||
+          o.mrn === patient.mrn ||
+          (patient.fullName.includes('Eleanor') && (o.patientId === 'p-1' || o.mrn === 'MRN-90214')),
+      );
+      setPatientLabOrders(filtered);
+    } catch {
+      // Fallback
+    } finally {
+      setIsLoadingLabOrders(false);
+    }
+  };
+
+  // Load consultations, medications, lab orders, and discharge status when patient opens
   useEffect(() => {
     if (!patient) return;
 
@@ -254,6 +341,9 @@ export function PatientChartModal({
     // Load Medications & Discharge Summary
     setMedications(getStoredMedications(patient.id));
     setDischargeSummary(getStoredDischargeSummary(patient.id));
+
+    // Load Diagnostic Lab Orders [FE-702]
+    loadLabOrders();
 
     setIsLoadingNotes(true);
     fetchConsultations(patient.id)
@@ -307,6 +397,53 @@ export function PatientChartModal({
     patient?.allergies || [],
     rxName,
   );
+
+  // Diagnostic Lab Ordering Handlers [FE-702]
+  const handleApplyLabPreset = (preset: (typeof LAB_TEST_PRESETS)[0]) => {
+    setSelectedTestName(preset.name);
+    setSelectedTestCategory(preset.category);
+    if (!clinicalIndication) {
+      setClinicalIndication(`Physician clinical diagnostic evaluation: ${preset.description.split('.')[0]}.`);
+    }
+  };
+
+  const handleDispatchLabOrder = async () => {
+    if (!selectedTestName.trim()) {
+      showNotice('error', 'Please select or enter a diagnostic test panel name.');
+      return;
+    }
+    setIsSubmittingLabOrder(true);
+    try {
+      const res = await createDiagnosticOrder({
+        patientId: patient.id,
+        testName: selectedTestName.trim(),
+        testCategory: selectedTestCategory.trim() || 'General Chemistry',
+        priority: labPriority,
+        physicianName: attendingPhysician || patient.primaryPhysician || 'Dr. Sarah Chen, MD',
+        clinicalIndication:
+          clinicalIndication.trim() ||
+          `Physician clinical workup during outpatient encounter: ${chiefComplaint || 'Diagnostic evaluation'}.`,
+      });
+
+      if (res.success && res.data) {
+        const orderCode = res.data.orderNumber;
+        showNotice(
+          'success',
+          `Diagnostic requisition ${orderCode} (${selectedTestName}) dispatched to Diagnostic Laboratory. Priority: ${labPriority}.`,
+        );
+        setSelectedTestName('');
+        setClinicalIndication('');
+        setLabPriority('ROUTINE');
+        await loadLabOrders();
+      } else {
+        showNotice('error', res.error || 'Failed to dispatch diagnostic lab requisition.');
+      }
+    } catch (err: any) {
+      showNotice('error', err?.message || 'Error dispatching diagnostic requisition.');
+    } finally {
+      setIsSubmittingLabOrder(false);
+    }
+  };
 
   // Issue E-Prescription Handler
   const handleIssuePrescription = async (e: React.FormEvent) => {
@@ -377,7 +514,7 @@ export function PatientChartModal({
     showNotice('success', `Switched to safe alternative: ${alt.drugName}`);
   };
 
-  // Patient Discharge Handler
+  // Patient Discharge Handler [BE-601]
   const handleDischargePatient = async () => {
     if (!dischargeNotes.trim()) {
       showNotice('error', 'Please enter discharge clinical notes and patient transition instructions.');
@@ -395,7 +532,13 @@ export function PatientChartModal({
       if (res.success && res.data) {
         setDischargeSummary(res.data);
         patient.status = 'Discharged';
-        showNotice('success', `Patient successfully discharged with disposition: ${dischargeDisposition}. Formal record updated.`);
+        const roomTurnoverMsg = res.turnedOverRoom
+          ? ` Suite ${res.turnedOverRoom.roomNumber} (${res.turnedOverRoom.wing}) transitioned to SANITIZING turnover protocol.`
+          : '';
+        showNotice(
+          'success',
+          `Patient successfully discharged with disposition: ${dischargeDisposition}.${roomTurnoverMsg} Formal record updated.`,
+        );
         onConsultationSaved?.();
       } else {
         showNotice('error', res.error || 'Failed to complete patient discharge.');
@@ -679,7 +822,7 @@ export function PatientChartModal({
           className="flex-1 flex flex-col overflow-hidden"
         >
           <div className="px-5 pt-3 pb-2 border-b border-border bg-card shrink-0">
-            <TabsList className="grid grid-cols-5 w-full h-10 bg-muted p-1 border border-border">
+            <TabsList className="grid grid-cols-6 w-full h-10 bg-muted p-1 border border-border">
               <TabsTrigger value="history" className="text-xs font-medium gap-1.5 cursor-pointer">
                 <History className="size-3.5" />
                 <span className="hidden sm:inline">Clinical Notes</span>
@@ -700,6 +843,16 @@ export function PatientChartModal({
                 <span className="hidden sm:inline">Live Vitals</span>
                 <span className="sm:hidden">Vitals</span>
                 <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
+              </TabsTrigger>
+              <TabsTrigger value="diagnostics" className="text-xs font-medium gap-1.5 cursor-pointer">
+                <FlaskConical className="size-3.5 text-sky-500" />
+                <span className="hidden sm:inline">Diagnostics & Labs</span>
+                <span className="sm:hidden">Labs</span>
+                {patientLabOrders.length > 0 && (
+                  <Badge variant="secondary" className="h-4 px-1.5 text-[10px] font-mono ml-0.5 bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20">
+                    {patientLabOrders.length}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger value="prescriptions" className="text-xs font-medium gap-1.5 cursor-pointer">
                 <Pill className="size-3.5 text-amber-600 dark:text-amber-400" />
@@ -1652,7 +1805,372 @@ export function PatientChartModal({
             </TabsContent>
 
             {/* ======================================================== */}
-            {/* TAB 4: PRESCRIPTIONS (Rx) & PATIENT DISCHARGE SUMMARY */}
+            {/* TAB 4: DIRECT DIAGNOSTIC LAB ORDERS & RESULTS [FE-702] */}
+            {/* ======================================================== */}
+            <TabsContent value="diagnostics" className="mt-0 space-y-6">
+              {/* 1. DISPATCH NEW DIAGNOSTIC REQUISITION FORM */}
+              <div className="border border-border rounded-xl p-4 bg-muted/20 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/80 pb-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <FlaskConical className="size-4 text-sky-500" />
+                      Physician Diagnostic Requisition & Order Placement
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Directly order diagnostic panels into the laboratory worklist queue. Certified findings sync automatically.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 self-start sm:self-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={loadLabOrders}
+                      disabled={isLoadingLabOrders}
+                      className="h-7 text-xs text-muted-foreground hover:text-foreground cursor-pointer gap-1"
+                    >
+                      <RefreshCw className={`size-3 ${isLoadingLabOrders ? 'animate-spin' : ''}`} />
+                      <span>Sync Worklist</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Diagnostic Panel Presets */}
+                <div className="space-y-1.5">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">
+                    Hospital Laboratory Panel Presets (1-Click Selection)
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {LAB_TEST_PRESETS.map((preset) => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => handleApplyLabPreset(preset)}
+                        className={`px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors cursor-pointer shadow-2xs text-left ${
+                          selectedTestName === preset.name
+                            ? 'bg-primary text-primary-foreground border-primary font-semibold'
+                            : 'bg-background border-border hover:bg-sky-500/10 hover:border-sky-500/40 hover:text-sky-600 dark:hover:text-sky-400 text-foreground'
+                        }`}
+                        title={preset.description}
+                      >
+                        {preset.name}
+                        <span className="ml-1 opacity-70 text-[10px] font-mono">({preset.category})</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Order Details Form */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-foreground">
+                      Diagnostic Test / Panel Name <span className="text-destructive">*</span>
+                    </label>
+                    <Input
+                      value={selectedTestName}
+                      onChange={(e) => setSelectedTestName(e.target.value)}
+                      placeholder="e.g. Comprehensive Metabolic Panel (CMP)"
+                      className="h-9 text-xs bg-background border-border"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-foreground">
+                      Laboratory Department / Category
+                    </label>
+                    <Select value={selectedTestCategory} onValueChange={setSelectedTestCategory}>
+                      <SelectTrigger className="h-9 text-xs bg-background border-border">
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="General Chemistry">General Chemistry</SelectItem>
+                        <SelectItem value="Hematology">Hematology</SelectItem>
+                        <SelectItem value="Cardiology Biomarkers">Cardiology Biomarkers</SelectItem>
+                        <SelectItem value="Cardiovascular Chemistry">Cardiovascular Chemistry</SelectItem>
+                        <SelectItem value="Endocrinology">Endocrinology</SelectItem>
+                        <SelectItem value="Renal & Urology">Renal & Urology</SelectItem>
+                        <SelectItem value="Microbiology / Serology">Microbiology / Serology</SelectItem>
+                        <SelectItem value="Radiology / Imaging">Radiology / Imaging</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-foreground">
+                      Clinical Priority Turnaround <span className="text-destructive">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setLabPriority('ROUTINE')}
+                        className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          labPriority === 'ROUTINE'
+                            ? 'bg-sky-500/15 border-sky-500 text-sky-700 dark:text-sky-300 shadow-xs'
+                            : 'bg-background border-border text-muted-foreground hover:bg-muted/40'
+                        }`}
+                      >
+                        <Clock className="size-3.5" />
+                        <span>ROUTINE (Standard)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLabPriority('STAT')}
+                        className={`px-3 py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          labPriority === 'STAT'
+                            ? 'bg-destructive/15 border-destructive text-destructive shadow-xs font-bold'
+                            : 'bg-background border-border text-muted-foreground hover:bg-muted/40'
+                        }`}
+                      >
+                        <AlertTriangle className="size-3.5" />
+                        <span>STAT (Urgent)</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-foreground">
+                      Ordering Physician Authority
+                    </label>
+                    <Input
+                      disabled
+                      value={attendingPhysician || patient.primaryPhysician || 'Dr. Sarah Chen, MD'}
+                      className="h-9 text-xs bg-muted/60 border-border font-mono text-muted-foreground"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-foreground">
+                    Clinical Indication / Diagnostic Question
+                  </label>
+                  <Input
+                    value={clinicalIndication}
+                    onChange={(e) => setClinicalIndication(e.target.value)}
+                    placeholder="e.g. Patient presents with acute fatigue and elevated BP; rule out metabolic derangement or renal impairment."
+                    className="h-9 text-xs bg-background border-border"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-2">
+                  <div className="text-[11px] text-muted-foreground font-mono">
+                    Target: <strong className="text-foreground">Diagnostic Laboratory STAT Bench</strong>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleDispatchLabOrder}
+                    disabled={isSubmittingLabOrder || !selectedTestName.trim()}
+                    className="h-9 text-xs font-semibold gap-2 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-sm"
+                  >
+                    {isSubmittingLabOrder ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <FlaskConical className="size-3.5" />
+                    )}
+                    <span>{isSubmittingLabOrder ? 'Dispatching Requisition...' : 'Dispatch Lab Requisition'}</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* 2. PATIENT'S DIAGNOSTIC REQUISITIONS & CERTIFIED FINDINGS */}
+              <div className="border border-border rounded-xl p-4 bg-card shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-2.5">
+                  <div>
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <FileCheck className="size-4 text-primary" />
+                      Active & Certified Diagnostic Requisitions
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Specimen tracking and clinical findings released by the laboratory pathology team.
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-xs font-mono self-start sm:self-center">
+                    {patientLabOrders.length} Requisition(s)
+                  </Badge>
+                </div>
+
+                {isLoadingLabOrders ? (
+                  <div className="p-8 text-center text-xs text-muted-foreground animate-pulse">
+                    Synchronizing patient diagnostic records...
+                  </div>
+                ) : patientLabOrders.length === 0 ? (
+                  <div className="p-8 rounded-lg bg-muted/20 border border-border/60 text-center space-y-2">
+                    <FlaskConical className="size-8 mx-auto text-muted-foreground opacity-40" />
+                    <p className="text-xs font-medium text-foreground">No Diagnostic Requisitions Recorded</p>
+                    <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                      No laboratory orders have been dispatched for {patient.fullName}. Select a panel preset above to place an order.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {patientLabOrders.map((order) => {
+                      const isStat = order.priority === 'STAT';
+                      const isVerified = order.status === 'VERIFIED';
+                      const hasResults = Array.isArray(order.results) && order.results.length > 0;
+
+                      return (
+                        <div
+                          key={order.id}
+                          className="border border-border rounded-lg p-3.5 bg-background shadow-2xs space-y-3"
+                        >
+                          {/* Order Header Strip */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-2">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono font-bold text-xs text-foreground">
+                                {order.orderNumber}
+                              </span>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] font-mono uppercase px-2 py-0.2 ${
+                                  isStat
+                                    ? 'bg-destructive/15 text-destructive border-destructive/30 animate-pulse font-bold'
+                                    : 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30 font-medium'
+                                }`}
+                              >
+                                {order.priority}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] font-mono uppercase px-2 py-0.2 ${
+                                  order.status === 'VERIFIED'
+                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                    : order.status === 'COMPLETED'
+                                    ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
+                                    : order.status === 'COLLECTED'
+                                    ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                                }`}
+                              >
+                                {order.status === 'ORDERED'
+                                  ? 'Phlebotomy / Collection Pending'
+                                  : order.status === 'COLLECTED'
+                                  ? 'Specimen Accessioned'
+                                  : order.status === 'COMPLETED'
+                                  ? 'Results Entered'
+                                  : order.status === 'VERIFIED'
+                                  ? 'Certified & Released'
+                                  : order.status}
+                              </Badge>
+                            </div>
+                            <span className="text-[11px] font-mono text-muted-foreground">
+                              Ordered {new Date(order.requestedAt).toLocaleString([], {
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+
+                          {/* Test Info */}
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 text-xs">
+                            <div>
+                              <div className="font-bold text-foreground text-sm flex items-center gap-1.5">
+                                <FlaskConical className="size-3.5 text-primary shrink-0" />
+                                {order.testName}
+                              </div>
+                              <div className="text-[11px] text-muted-foreground font-mono mt-0.5">
+                                Category: <strong className="text-foreground">{order.testCategory}</strong> • Requested by: <strong className="text-foreground">{order.requestedBy}</strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Clinical Indication */}
+                          {order.clinicalIndication && (
+                            <div className="p-2 rounded bg-muted/40 border border-border/60 text-xs text-muted-foreground">
+                              <span className="font-semibold text-foreground">Indication:</span> {order.clinicalIndication}
+                            </div>
+                          )}
+
+                          {/* Results Table if Available */}
+                          {hasResults ? (
+                            <div className="space-y-2 pt-1">
+                              <span className="text-[11px] font-semibold text-foreground uppercase tracking-wider block">
+                                Diagnostic Analyzer Findings ({order.results!.length} Analyte Parameters)
+                              </span>
+                              <div className="border border-border rounded-md overflow-hidden bg-muted/10">
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="border-b border-border bg-muted/40 text-[11px] text-muted-foreground font-medium">
+                                      <th className="py-1.5 px-3 text-left">Analyte / Parameter</th>
+                                      <th className="py-1.5 px-3 text-left">Observed Value</th>
+                                      <th className="py-1.5 px-3 text-left">Reference Range</th>
+                                      <th className="py-1.5 px-3 text-right">Clinical Status</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-border/50 font-mono">
+                                    {order.results!.map((item, idx) => (
+                                      <tr
+                                        key={idx}
+                                        className={item.isAbnormal ? 'bg-amber-500/5 dark:bg-amber-500/10' : ''}
+                                      >
+                                        <td className="py-1.5 px-3 font-sans font-medium text-foreground">
+                                          {item.parameter}
+                                        </td>
+                                        <td className="py-1.5 px-3 font-bold text-foreground">
+                                          {item.value} <span className="font-normal text-muted-foreground text-[10px]">{item.unit}</span>
+                                        </td>
+                                        <td className="py-1.5 px-3 text-muted-foreground text-[11px]">
+                                          {item.referenceRange}
+                                        </td>
+                                        <td className="py-1.5 px-3 text-right">
+                                          {item.isPanicValue ? (
+                                            <Badge variant="outline" className="text-[9px] bg-destructive/15 text-destructive border-destructive/30 font-bold">
+                                              CRITICAL PANIC
+                                            </Badge>
+                                          ) : item.isAbnormal ? (
+                                            <Badge variant="outline" className="text-[9px] bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 font-semibold">
+                                              ABNORMAL
+                                            </Badge>
+                                          ) : (
+                                            <Badge variant="outline" className="text-[9px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                                              NORMAL
+                                            </Badge>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+
+                              {/* Summary notes & Verified stamp */}
+                              {order.resultSummary && (
+                                <p className="text-xs text-muted-foreground italic pt-0.5">
+                                  <strong className="text-foreground not-italic font-semibold">Pathologist Summary:</strong> {order.resultSummary}
+                                </p>
+                              )}
+
+                              {(order.verifiedBy || isVerified) && (
+                                <div className="flex items-center gap-1.5 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 pt-1">
+                                  <CheckCircle2 className="size-3.5 shrink-0" />
+                                  <span>
+                                    Certified & Released by <strong>{order.verifiedBy || 'Dr. Elena Rostova, MD (Clinical Pathologist)'}</strong>
+                                    {order.verifiedAt && ` on ${new Date(order.verifiedAt).toLocaleDateString()}`}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground italic bg-muted/20 p-2.5 rounded">
+                              <Clock className="size-3.5 text-amber-500 shrink-0" />
+                              <span>
+                                {order.status === 'ORDERED'
+                                  ? 'Specimen collection pending at Outpatient Phlebotomy Station.'
+                                  : 'Specimen in process. Analyzer telemetry will appear automatically upon verification.'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            {/* ======================================================== */}
+            {/* TAB 5: PRESCRIPTIONS (Rx) & PATIENT DISCHARGE SUMMARY */}
             {/* ======================================================== */}
             <TabsContent value="prescriptions" className="mt-0 space-y-6">
               {/* 1. ACTIVE MEDICATIONS TABLE */}

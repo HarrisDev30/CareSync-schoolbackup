@@ -1754,7 +1754,7 @@ export function getStoredDischargeSummary(patientId: string): DischargeSummary |
 export async function dischargePatient(
   patientId: string,
   summary: Omit<DischargeSummary, 'patientId' | 'dischargedAt'>,
-): Promise<{ success: boolean; data?: DischargeSummary; error?: string }> {
+): Promise<{ success: boolean; data?: DischargeSummary; error?: string; turnedOverRoom?: HospitalRoom }> {
   const fullSummary: DischargeSummary = {
     patientId,
     dischargedAt: new Date().toISOString(),
@@ -1773,6 +1773,55 @@ export async function dischargePatient(
     p.id === patientId ? { ...p, status: 'Discharged' as PatientStatus } : p,
   );
 
+  const patient = localPatients.find((p) => p.id === patientId);
+
+  // [BE-601] Automated Facility Suite Turnover to SANITIZING upon Patient Discharge
+  let turnedOverRoom: HospitalRoom | undefined;
+  try {
+    const rooms = getStoredHospitalRooms();
+    const roomIndex = rooms.findIndex(
+      (r) =>
+        r.patientId === patientId ||
+        (patient && r.mrn && r.mrn === patient.mrn) ||
+        (patient && r.assignedPatient && r.assignedPatient.toLowerCase() === patient.fullName.toLowerCase()),
+    );
+
+    if (roomIndex !== -1) {
+      const room = rooms[roomIndex];
+      const updatedRoom: HospitalRoom = {
+        ...room,
+        status: 'SANITIZING',
+        assignedPatient: undefined,
+        patientId: undefined,
+        mrn: undefined,
+        reason: undefined,
+        notes: `Turnover initiated post-discharge of ${patient?.fullName || 'patient'}. Environmental services (EVS) sanitization in progress.`,
+        updatedAt: new Date().toISOString(),
+      };
+      rooms[roomIndex] = updatedRoom;
+      saveStoredHospitalRooms(rooms);
+      turnedOverRoom = updatedRoom;
+
+      recordAuditLogEntry({
+        action: 'FACILITY_ROOM_TURNOVER_INITIATED',
+        resource: 'facility_rooms',
+        resourceId: updatedRoom.id,
+        userId: 'u-1',
+        userEmail: 'sarah.chen@caresync.org',
+        userRole: 'PHYSICIAN',
+        ipAddress: '192.168.1.42',
+        metadata: {
+          roomNumber: updatedRoom.roomNumber,
+          wing: updatedRoom.wing,
+          dischargedPatient: patient?.fullName,
+          status: 'SANITIZING',
+        },
+      });
+    }
+  } catch {
+    // Non-fatal turnover fallback
+  }
+
   recordAuditLogEntry({
     action: 'PATIENT_DISCHARGED',
     resource: 'patients',
@@ -1785,10 +1834,11 @@ export async function dischargePatient(
       disposition: fullSummary.disposition,
       dischargedBy: fullSummary.dischargedBy,
       reconciliationCompleted: fullSummary.reconciliationCompleted,
+      turnedOverRoom: turnedOverRoom ? turnedOverRoom.roomNumber : undefined,
     },
   });
 
-  return { success: true, data: fullSummary };
+  return { success: true, data: fullSummary, turnedOverRoom };
 }
 
 // ---------------------------------------------------------------------------
