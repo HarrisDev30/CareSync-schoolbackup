@@ -25,6 +25,7 @@ coverage/
 Thumbs.db
 .idea/
 .vscode/
+*.code-workspace
 *.suo
 *.ntvs*
 *.njsproj

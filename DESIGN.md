@@ -280,4 +280,3 @@ When building a new module:
    - Reuse the exact header blueprint (§2).
    - Use the same card borders, subtle background tints, font sizes, and badge styles (§4).
    - Never deviate from the `h-10` button scale for headers.
-

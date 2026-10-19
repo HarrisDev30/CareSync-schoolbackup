@@ -235,6 +235,16 @@ export function PatientChartModal({
   const [respiratoryRate, setRespiratoryRate] = useState('16');
   const [weightKg, setWeightKg] = useState('68.5');
 
+  // Safe Medical Record Correction / Addendum State [FE-602]
+  const [amendingNoteId, setAmendingNoteId] = useState<string | null>(null);
+  const [amendmentReason, setAmendmentReason] = useState('');
+  const [amendChiefComplaint, setAmendChiefComplaint] = useState('');
+  const [amendPhysicalExam, setAmendPhysicalExam] = useState('');
+  const [amendDiagnosisCode, setAmendDiagnosisCode] = useState('');
+  const [amendDiagnosisDesc, setAmendDiagnosisDesc] = useState('');
+  const [amendTreatmentPlan, setAmendTreatmentPlan] = useState('');
+  const [expandedLedgerNoteId, setExpandedLedgerNoteId] = useState<string | null>(null);
+
   // Load consultations, medications, and discharge status when patient opens
   useEffect(() => {
     if (!patient) return;
@@ -492,16 +502,7 @@ export function PatientChartModal({
     }
   };
 
-  // Safe Medical Record Correction / Addendum State [FE-602]
-  const [amendingNoteId, setAmendingNoteId] = useState<string | null>(null);
-  const [amendmentReason, setAmendmentReason] = useState('');
-  const [amendChiefComplaint, setAmendChiefComplaint] = useState('');
-  const [amendPhysicalExam, setAmendPhysicalExam] = useState('');
-  const [amendDiagnosisCode, setAmendDiagnosisCode] = useState('');
-  const [amendDiagnosisDesc, setAmendDiagnosisDesc] = useState('');
-  const [amendTreatmentPlan, setAmendTreatmentPlan] = useState('');
-  const [expandedLedgerNoteId, setExpandedLedgerNoteId] = useState<string | null>(null);
-
+  // Safe Medical Record Correction / Addendum Handlers [FE-602]
   const handleStartAmend = (note: Consultation) => {
     setAmendingNoteId(note.id);
     setAmendmentReason('Diagnostic refinement following verified laboratory findings');
