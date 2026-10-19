@@ -62,6 +62,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CommandMenu } from '@/components/command-menu';
 
 const REVOCATION_PRESETS = [
@@ -345,20 +346,11 @@ export default function UsersGovernancePage() {
       {/* Top Executive Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
-              Staff Directory & Access Control
-            </h1>
-            <Badge
-              variant="outline"
-              className="text-[10px] font-mono uppercase bg-primary/10 text-primary border-primary/20"
-            >
-              RBAC + Session Governance
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Manage hospital staff roles, provision Argon2id credentials, and
-            enforce immediate access revocation when staff members depart.
+          <h1 className="text-xl font-bold tracking-tight text-foreground">
+            Staff Directory & Access Control
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage hospital personnel credentials, assigned roles, and immediate access revocation.
           </p>
         </div>
 
@@ -367,7 +359,7 @@ export default function UsersGovernancePage() {
             variant="outline"
             size="sm"
             onClick={loadStaff}
-            className="h-8 gap-1.5 text-xs cursor-pointer"
+            className="h-9 gap-1.5 text-sm cursor-pointer border-border"
           >
             <RefreshCw className="size-3.5" />
             <span>Refresh</span>
@@ -378,7 +370,7 @@ export default function UsersGovernancePage() {
               setFormError(null);
               setIsCreateOpen(true);
             }}
-            className="h-8 gap-1.5 text-xs cursor-pointer"
+            className="h-9 gap-1.5 text-sm cursor-pointer"
           >
             <UserPlus className="size-3.5" />
             <span>+ Provision Staff Account</span>
@@ -386,113 +378,182 @@ export default function UsersGovernancePage() {
         </div>
       </div>
 
-      {/* 4-Card Governance KPI Strip */}
-      <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-        <Card className="border-border shadow-xs">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs font-medium flex items-center justify-between">
-              <span>Total Hospital Staff</span>
-              <Users className="size-4 text-primary" />
+      {/* 4-Card Governance KPI Strip (Standardized CareSync KPI Grid) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:shadow-xs">
+        {/* 1. Total Personnel */}
+        <Card className="@container/card border-border">
+          <CardHeader className="relative pb-2">
+            <CardDescription className="text-sm font-medium text-muted-foreground">
+              Total Personnel
             </CardDescription>
-            <CardTitle className="text-2xl font-bold tabular-nums">
+            <CardTitle className="text-2xl @[250px]/card:text-3xl font-semibold tabular-nums tracking-tight text-foreground mt-1">
               {staffList.length}
             </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge variant="outline" className="flex items-center gap-1.5 rounded-lg text-xs font-medium">
+                <Users className="size-3 text-muted-foreground" />
+                <span>Personnel</span>
+              </Badge>
+            </div>
           </CardHeader>
-          <CardFooter className="text-[11px] text-muted-foreground pt-0">
-            Across 4 clinical & administrative RBAC roles
+          <CardFooter className="flex-col items-start gap-1 text-sm pt-2">
+            <div className="line-clamp-1 flex items-center gap-2 font-medium text-foreground">
+              <span>Master Staff Registry</span>
+              <Building2 className="size-3.5 text-muted-foreground" />
+            </div>
+            <div className="text-muted-foreground text-xs sm:text-sm">
+              Across all hospital departments & wings
+            </div>
           </CardFooter>
         </Card>
 
-        <Card className="border-border shadow-xs">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs font-medium flex items-center justify-between">
-              <span>Authorized Active Staff</span>
-              <UserCheck className="size-4 text-emerald-600" />
+        {/* 2. Active & Authorized */}
+        <Card className="@container/card border-border">
+          <CardHeader className="relative pb-2">
+            <CardDescription className="text-sm font-medium text-muted-foreground">
+              Active & Authorized
             </CardDescription>
-            <CardTitle className="text-2xl font-bold tabular-nums text-emerald-600 dark:text-emerald-400">
+            <CardTitle className="text-2xl @[250px]/card:text-3xl font-semibold tabular-nums tracking-tight text-foreground mt-1">
               {activeCount}
             </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge variant="outline" className="flex items-center gap-1.5 rounded-lg text-xs font-medium">
+                <UserCheck className="size-3 text-emerald-600" />
+                <span>Authorized</span>
+              </Badge>
+            </div>
           </CardHeader>
-          <CardFooter className="text-[11px] text-muted-foreground pt-0">
-            {physicianCount} attending physicians with signing privileges
+          <CardFooter className="flex-col items-start gap-1 text-sm pt-2">
+            <div className="line-clamp-1 flex items-center gap-2 font-medium text-foreground">
+              <span>Active Credentials</span>
+              <CheckCircle2 className="size-3.5 text-emerald-600" />
+            </div>
+            <div className="text-muted-foreground text-xs sm:text-sm">
+              Operational staff with live session access
+            </div>
           </CardFooter>
         </Card>
 
-        <Card className="border-border shadow-xs">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs font-medium flex items-center justify-between">
-              <span>Revoked / Disabled Accounts</span>
-              <UserX className="size-4 text-destructive" />
+        {/* 3. Access Revoked */}
+        <Card className="@container/card border-border">
+          <CardHeader className="relative pb-2">
+            <CardDescription className="text-sm font-medium text-muted-foreground">
+              Access Revoked
             </CardDescription>
-            <CardTitle className="text-2xl font-bold tabular-nums text-destructive">
-              {revokedCount}
+            <CardTitle className="text-2xl @[250px]/card:text-3xl font-semibold tabular-nums tracking-tight text-foreground mt-1">
+              <span className={revokedCount > 0 ? 'text-destructive' : ''}>
+                {revokedCount}
+              </span>
             </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge
+                variant={revokedCount > 0 ? 'destructive' : 'outline'}
+                className="flex items-center gap-1.5 rounded-lg text-xs font-medium"
+              >
+                <Lock className="size-3" />
+                <span>Disabled</span>
+              </Badge>
+            </div>
           </CardHeader>
-          <CardFooter className="text-[11px] text-muted-foreground pt-0">
-            Immediate Redis session eviction enforced
+          <CardFooter className="flex-col items-start gap-1 text-sm pt-2">
+            <div className="line-clamp-1 flex items-center gap-2 font-medium text-foreground">
+              <span>Deactivated Accounts</span>
+              <UserX className="size-3.5 text-muted-foreground" />
+            </div>
+            <div className="text-muted-foreground text-xs sm:text-sm">
+              {revokedCount === 0
+                ? 'All accounts active · Zero locks'
+                : 'Workstations locked · Sessions purged'}
+            </div>
           </CardFooter>
         </Card>
 
-        <Card className="border-border shadow-xs">
-          <CardHeader className="pb-2">
-            <CardDescription className="text-xs font-medium flex items-center justify-between">
-              <span>Credential & Session Policy</span>
-              <KeyRound className="size-4 text-primary" />
+        {/* 4. Attending Physicians */}
+        <Card className="@container/card border-border">
+          <CardHeader className="relative pb-2">
+            <CardDescription className="text-sm font-medium text-muted-foreground">
+              Attending Physicians
             </CardDescription>
-            <CardTitle className="text-base font-bold tracking-tight pt-1">
-              Argon2id + 15m Idle Lock
+            <CardTitle className="text-2xl @[250px]/card:text-3xl font-semibold tabular-nums tracking-tight text-foreground mt-1">
+              {physicianCount}
             </CardTitle>
+            <div className="absolute right-4 top-4">
+              <Badge variant="outline" className="flex items-center gap-1.5 rounded-lg text-xs font-medium">
+                <Stethoscope className="size-3 text-muted-foreground" />
+                <span>Medical Staff</span>
+              </Badge>
+            </div>
           </CardHeader>
-          <CardFooter className="text-[11px] text-muted-foreground pt-0">
-            Not everyone can see everything (Least Privilege)
+          <CardFooter className="flex-col items-start gap-1 text-sm pt-2">
+            <div className="line-clamp-1 flex items-center gap-2 font-medium text-foreground">
+              <span>Prescription Authority</span>
+              <Stethoscope className="size-3.5 text-muted-foreground" />
+            </div>
+            <div className="text-muted-foreground text-xs sm:text-sm">
+              Licensed clinicians with signing rights
+            </div>
           </CardFooter>
         </Card>
       </div>
 
       {/* Staff Directory & Access Revocation Table Card */}
       <Card className="border-border shadow-xs">
-        <CardHeader className="border-b border-border/60 pb-4">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <CardHeader className="py-5 px-6 border-b border-border/60">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <CardTitle className="text-sm font-bold">
-                Hospital Personnel & Access Registry
+              <CardTitle className="text-lg font-semibold tracking-tight text-foreground flex items-center gap-2.5">
+                <span>Personnel Directory</span>
+                <Badge variant="outline" className="font-mono text-xs font-medium text-muted-foreground px-2 py-0.5">
+                  {filteredStaff.length} accounts
+                </Badge>
               </CardTitle>
-              <CardDescription className="text-xs">
-                Workflow: Staff Member Leaves → Account Disabled → Access
-                Revoked & Sessions Purged
+              <CardDescription className="text-sm text-muted-foreground mt-1">
+                Hospital staff credentials, role-based permissions, and active session status.
               </CardDescription>
             </div>
+          </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <div className="relative w-full sm:w-64">
-                <Search className="size-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search name, email, license..."
-                  className="h-8 pl-8 text-xs"
-                />
-              </div>
+          {/* Unified Command Toolbar: Search Bar + Role Tabs */}
+          <div className="pt-3.5 flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filter personnel by name, email, department, or credential ID..."
+                className="pl-10 pr-16 h-10 text-sm border-border bg-background shadow-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+              <button
+                type="button"
+                onClick={() => setIsCommandOpen(true)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-1 px-2 py-1 rounded border border-border bg-muted text-xs font-mono text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                title="Open Command Palette (⌘K)"
+              >
+                ⌘K
+              </button>
+            </div>
 
+            <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
               <Tabs
                 value={roleFilter}
                 onValueChange={setRoleFilter}
-                className="w-full sm:w-auto"
+                className="w-auto shrink-0"
               >
-                <TabsList className="h-8 p-0.5 bg-muted/60">
-                  <TabsTrigger value="ALL" className="text-xs h-7 px-2.5 cursor-pointer">
+                <TabsList className="h-10 bg-muted p-1 border border-border">
+                  <TabsTrigger value="ALL" className="text-sm px-3.5 py-1.5 font-medium cursor-pointer">
                     All ({staffList.length})
                   </TabsTrigger>
-                  <TabsTrigger value="PHYSICIAN" className="text-xs h-7 px-2.5 cursor-pointer">
+                  <TabsTrigger value="PHYSICIAN" className="text-sm px-3.5 py-1.5 font-medium cursor-pointer">
                     Physicians
                   </TabsTrigger>
-                  <TabsTrigger value="RECEPTIONIST" className="text-xs h-7 px-2.5 cursor-pointer">
+                  <TabsTrigger value="RECEPTIONIST" className="text-sm px-3.5 py-1.5 font-medium cursor-pointer">
                     Reception
                   </TabsTrigger>
-                  <TabsTrigger value="LABORATORY_USER" className="text-xs h-7 px-2.5 cursor-pointer">
-                    Lab
+                  <TabsTrigger value="LABORATORY_USER" className="text-sm px-3.5 py-1.5 font-medium cursor-pointer">
+                    Lab Techs
                   </TabsTrigger>
-                  <TabsTrigger value="REVOKED" className="text-xs h-7 px-2.5 cursor-pointer">
+                  <TabsTrigger value="REVOKED" className="text-sm px-3.5 py-1.5 font-medium cursor-pointer">
                     Revoked ({revokedCount})
                   </TabsTrigger>
                 </TabsList>
@@ -558,13 +619,20 @@ export default function UsersGovernancePage() {
                       }
                     >
                       <TableCell className="pl-5 py-3">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-xs text-foreground">
-                            {staff.fullName}
-                          </span>
-                          <span className="text-[11px] font-mono text-muted-foreground">
-                            {staff.email}
-                          </span>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="size-8 text-xs font-semibold text-muted-foreground bg-muted border border-border shrink-0 shadow-2xs">
+                            <AvatarFallback>
+                              {(staff.firstName?.[0] || 'S') + (staff.lastName?.[0] || 'U')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-xs text-foreground">
+                              {staff.fullName}
+                            </span>
+                            <span className="text-[11px] font-mono text-muted-foreground">
+                              {staff.email}
+                            </span>
+                          </div>
                         </div>
                       </TableCell>
 
