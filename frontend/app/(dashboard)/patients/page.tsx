@@ -52,7 +52,10 @@ export default function PatientsPage() {
 
   useEffect(() => {
     setMounted(true);
-    const handleSync = () => setCurrentUser(getActiveStaffUser());
+    const handleSync = () => {
+      setCurrentUser(getActiveStaffUser());
+      loadPatients(searchQuery, bloodTypeFilter);
+    };
     handleSync();
     window.addEventListener('storage', handleSync);
     window.addEventListener('focus', handleSync);
@@ -62,7 +65,7 @@ export default function PatientsPage() {
       window.removeEventListener('focus', handleSync);
       window.removeEventListener('caresync_user_changed', handleSync);
     };
-  }, []);
+  }, [searchQuery, bloodTypeFilter]);
 
   const loadPatients = async (search?: string, bloodType?: string) => {
     const data = await fetchPatients(search, bloodType === 'ALL' ? undefined : bloodType);

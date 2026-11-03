@@ -628,10 +628,19 @@ export async function createPatient(input: CreatePatientInput): Promise<{ succes
     };
   }
 
+  const cleanFirst = input.firstName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const cleanLast = input.lastName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const email = input.email?.trim() || `${cleanFirst || 'patient'}.${cleanLast || 'user'}.${Date.now()}@patient.caresync.org`;
+  const nationalId = input.nationalId?.trim() || `999-${Math.floor(10 + Math.random() * 89)}-${Math.floor(1000 + Math.random() * 8999)}`;
+  const phoneNumber = input.phoneNumber?.trim() || '(555) 234-8901';
+  const address = input.address?.trim() || '123 Medical Way, Healthcare City';
+  const emergencyContactName = input.emergencyContactName?.trim() || 'Next of Kin';
+  const emergencyContactPhone = input.emergencyContactPhone?.trim() || '(555) 349-8209';
+
   try {
     const token = await getValidAuthToken();
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -640,17 +649,17 @@ export async function createPatient(input: CreatePatientInput): Promise<{ succes
       method: 'POST',
       headers,
       body: JSON.stringify({
-        firstName: input.firstName,
-        lastName: input.lastName,
+        firstName: input.firstName.trim(),
+        lastName: input.lastName.trim(),
         dateOfBirth: input.dateOfBirth,
         gender: input.gender === 'Female' ? 'FEMALE' : input.gender === 'Male' ? 'MALE' : 'OTHER',
-        bloodType: input.bloodType,
-        nationalId: input.nationalId || '999-00-1234',
-        phoneNumber: input.phoneNumber || '(555) 234-8901',
-        email: input.email || `${input.firstName.toLowerCase()}.${input.lastName.toLowerCase()}@example.com`,
-        address: input.address || '123 Medical Way, Healthcare City',
-        emergencyContactName: input.emergencyContactName,
-        emergencyContactPhone: input.emergencyContactPhone,
+        bloodType: input.bloodType || 'O+',
+        nationalId,
+        phoneNumber,
+        email,
+        address,
+        emergencyContactName,
+        emergencyContactPhone,
         knownAllergies: input.knownAllergies || [],
       }),
       signal: controller.signal,
@@ -670,41 +679,27 @@ export async function createPatient(input: CreatePatientInput): Promise<{ succes
         dateOfBirth: saved.dateOfBirth,
         age: calculateAge(saved.dateOfBirth),
         bloodType: saved.bloodType || input.bloodType,
-        phone: input.phoneNumber,
+        phone: phoneNumber,
         status: 'Active',
         primaryPhysician: input.primaryPhysician || 'Dr. Sarah Chen, MD',
         allergies: input.knownAllergies || [],
-        emergencyContact: input.emergencyContactName ? `${input.emergencyContactName} — ${input.emergencyContactPhone}` : undefined,
+        emergencyContact: `${emergencyContactName} — ${emergencyContactPhone}`,
         createdAt: saved.createdAt || new Date().toISOString(),
       };
       localPatients = [newPatient, ...localPatients];
       return { success: true, data: newPatient };
+    } else {
+      const errJson = await res.json().catch(() => null);
+      const errMsg = Array.isArray(errJson?.message)
+        ? errJson.message.join(', ')
+        : (errJson?.message || 'Server rejected patient registration');
+      console.error('Failed to create patient on server:', errMsg);
+      return { success: false, error: errMsg };
     }
-  } catch {
-    // Local fallback
+  } catch (err: any) {
+    console.error('Registration network error:', err);
+    return { success: false, error: 'Network timeout: could not reach patient registration service.' };
   }
-
-  const nextSeq = String(localPatients.length + 90215);
-  const newPatient: Patient = {
-    id: `p-${Date.now()}`,
-    mrn: `MRN-${nextSeq}`,
-    fullName: `${input.firstName.trim()} ${input.lastName.trim()}`,
-    firstName: input.firstName.trim(),
-    lastName: input.lastName.trim(),
-    gender: input.gender,
-    dateOfBirth: input.dateOfBirth,
-    age: calculateAge(input.dateOfBirth),
-    bloodType: input.bloodType,
-    phone: input.phoneNumber || '(555) 234-8901',
-    status: 'Active',
-    primaryPhysician: input.primaryPhysician || 'Dr. Sarah Chen, MD (Station 4B)',
-    allergies: input.knownAllergies || [],
-    emergencyContact: input.emergencyContactName ? `${input.emergencyContactName} — ${input.emergencyContactPhone}` : undefined,
-    createdAt: new Date().toISOString(),
-  };
-
-  localPatients = [newPatient, ...localPatients];
-  return { success: true, data: newPatient };
 }
 
 export async function fetchAppointments(): Promise<Appointment[]> {
