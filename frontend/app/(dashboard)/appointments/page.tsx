@@ -9,13 +9,14 @@ import {
   AlertCircle,
   RotateCcw,
 } from 'lucide-react';
-import { Appointment, Patient, CreateAppointmentInput, AppointmentStatus } from '@/types';
+import { Appointment, Patient, CreateAppointmentInput, AppointmentStatus, StaffUser } from '@/types';
 import {
   fetchAppointments,
   fetchPatients,
   createAppointment,
   updateAppointmentStatus,
   PHYSICIAN_PRESETS,
+  getActiveStaffUser,
 } from '@/lib/api';
 import { ConsultationKpiGrid } from './_components/consultation-kpi-grid';
 import { ConsultationTable } from './_components/consultation-table';
@@ -52,6 +53,22 @@ export default function AppointmentsPage() {
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [selectedChartPatient, setSelectedChartPatient] = useState<Patient | null>(null);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [currentUser, setCurrentUser] = useState<StaffUser>(getActiveStaffUser());
+
+  useEffect(() => {
+    setMounted(true);
+    const handleSync = () => setCurrentUser(getActiveStaffUser());
+    handleSync();
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('focus', handleSync);
+    window.addEventListener('caresync_user_changed', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('focus', handleSync);
+      window.removeEventListener('caresync_user_changed', handleSync);
+    };
+  }, []);
   const [, startTransition] = useTransition();
 
   const loadData = async () => {
@@ -228,14 +245,16 @@ export default function AppointmentsPage() {
             </kbd>
           </Button>
 
-          <Button
-            onClick={() => setIsModalOpen(true)}
-            size="sm"
-            className="gap-2 h-10 px-4 cursor-pointer active:scale-[0.98] transition-transform bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Book Consultation</span>
-          </Button>
+          {mounted && (currentUser.role === 'RECEPTIONIST' || currentUser.role === 'ADMINISTRATOR') && (
+            <Button
+              onClick={() => setIsModalOpen(true)}
+              size="sm"
+              className="gap-2 h-10 px-4 cursor-pointer active:scale-[0.98] transition-transform bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Book Consultation</span>
+            </Button>
+          )}
         </div>
       </div>
 

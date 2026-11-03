@@ -105,6 +105,8 @@ export default function AuditLogsPage() {
       l.action.includes('AUTH'),
   ).length;
 
+  const patientCount = logs.filter((l) => l.action.includes("PATIENT")).length;
+
   const clinicalCount = logs.filter(
     (l) =>
       l.action.includes('CONSULTATION') ||
@@ -144,6 +146,8 @@ export default function AuditLogsPage() {
         log.action.includes('DENIED') ||
         log.action.includes('AUTH');
       if (!isSecurity) return false;
+    } else if (actionCategory === 'PATIENT') {
+      if (!log.action.includes('PATIENT')) return false;
     } else if (actionCategory === 'CLINICAL') {
       const isClinical =
         log.action.includes('CONSULTATION') ||
@@ -502,6 +506,9 @@ export default function AuditLogsPage() {
                   </TabsTrigger>
                   <TabsTrigger value="SECURITY" className="text-xs px-3 py-1.5 font-medium cursor-pointer">
                     Security ({securityCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="PATIENT" className="text-xs px-3 py-1.5 font-medium cursor-pointer">
+                    Patients ({patientCount})
                   </TabsTrigger>
                   <TabsTrigger value="CLINICAL" className="text-xs px-3 py-1.5 font-medium cursor-pointer">
                     Clinical ({clinicalCount})

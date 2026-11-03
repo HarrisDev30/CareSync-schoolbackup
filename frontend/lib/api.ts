@@ -500,12 +500,21 @@ export async function setActiveStaffUser(user: StaffUser): Promise<string | null
   if (typeof window === 'undefined') return null;
   localStorage.setItem('caresync_current_user', JSON.stringify(user));
   localStorage.removeItem('caresync_token'); // Clear old token to force refresh
+  localStorage.removeItem('caresync_token_user_email');
+  window.dispatchEvent(new Event('caresync_user_changed'));
   return await getValidAuthToken(user);
 }
 
 export async function getValidAuthToken(targetUser?: StaffUser): Promise<string | null> {
   if (typeof window === 'undefined') return null;
   const user = targetUser || getActiveStaffUser();
+
+  const cachedToken = localStorage.getItem('caresync_token');
+  const cachedEmail = localStorage.getItem('caresync_token_user_email');
+  if (cachedToken && !targetUser && cachedEmail === user.email) {
+    return cachedToken;
+  }
+
   const password = 'CareSync@2026!';
 
   try {
@@ -520,6 +529,7 @@ export async function getValidAuthToken(targetUser?: StaffUser): Promise<string 
       const token = json?.data?.accessToken || null;
       if (token) {
         localStorage.setItem('caresync_token', token);
+        localStorage.setItem('caresync_token_user_email', user.email);
         return token;
       }
     }
@@ -1402,9 +1412,9 @@ export async function finalizeConsultation(
 export async function fetchAuditLogs(): Promise<AuditLogEntry[]> {
   try {
     // Admin login token for audit logs
-    const adminUser = STAFF_PRESETS[3]; // admin@caresync.org
+    const adminUser = STAFF_PRESETS.find((s) => s.role === 'ADMINISTRATOR') || STAFF_PRESETS[4];
     const token = await getValidAuthToken(adminUser);
-    const res = await fetch(`${API_BASE_URL}/admin/audit-logs`, {
+    const res = await fetch(`${API_BASE_URL}/admin/audit-logs?limit=50`, {
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -1414,7 +1424,21 @@ export async function fetchAuditLogs(): Promise<AuditLogEntry[]> {
       const json = await res.json();
       const items = json?.data?.items || json?.data;
       if (Array.isArray(items) && items.length > 0) {
-        return items;
+        return items.map((raw: any) => ({
+          id: String(raw.id || raw.logUuid || `aud-${Math.random()}`),
+          action: raw.action,
+          resource:
+            raw.action === 'USER_AUTHENTICATED' || raw.resourceEntity === 'auth' || raw.resource === 'auth'
+              ? 'security'
+              : raw.resourceEntity || raw.resource || 'SYSTEM',
+          resourceId: raw.resourceId || undefined,
+          userId: raw.userId || raw.user?.id || 'system',
+          userEmail: raw.user?.email || raw.userEmail || (raw.details?.role ? `${raw.details.role.toLowerCase()}@caresync.org` : 'system@caresync.org'),
+          userRole: raw.user?.role || raw.userRole || raw.details?.role || 'SYSTEM',
+          ipAddress: raw.ipAddress || '127.0.0.1',
+          timestamp: raw.createdAt || raw.timestamp || new Date().toISOString(),
+          metadata: raw.details || raw.metadata || {},
+        }));
       }
     }
   } catch {
@@ -2206,6 +2230,20 @@ export async function submitConsultationCorrection(
   try {
     const physicianUser = STAFF_PRESETS.find((s) => s.role === 'PHYSICIAN') || STAFF_PRESETS[1];
     const token = await getValidAuthToken(physicianUser);
+
+    let fieldModified = 'primaryDiagnosisDescription';
+    let correctedValue = input.primaryDiagnosisDescription.trim();
+    if (input.primaryDiagnosisDescription.trim() !== (target.primaryDiagnosisDescription || '').trim()) {
+      fieldModified = 'primaryDiagnosisDescription';
+      correctedValue = input.primaryDiagnosisDescription.trim();
+    } else if (input.treatmentPlan.trim() !== (target.treatmentPlan || '').trim()) {
+      fieldModified = 'treatmentPlan';
+      correctedValue = input.treatmentPlan.trim();
+    } else if (input.chiefComplaint.trim() !== (target.chiefComplaint || '').trim()) {
+      fieldModified = 'chiefComplaint';
+      correctedValue = input.chiefComplaint.trim();
+    }
+
     await fetch(`${API_BASE_URL}/consultations/${input.consultationId}/corrections`, {
       method: 'POST',
       headers: {
@@ -2213,7 +2251,11 @@ export async function submitConsultationCorrection(
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({
+        reason: 'DIAGNOSTIC_REVISION',
+        justificationNotes: input.amendmentReason.trim(),
         amendmentReason: input.amendmentReason.trim(),
+        fieldModified,
+        correctedValue,
         chiefComplaint: input.chiefComplaint.trim(),
         physicalExamination: input.physicalExamination?.trim(),
         primaryDiagnosisDescription: input.primaryDiagnosisDescription.trim(),

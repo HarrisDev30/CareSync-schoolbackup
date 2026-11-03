@@ -123,23 +123,58 @@ export class UpdateConsultationDto {
 }
 
 export class CreateCorrectionDto {
-  @ApiProperty({ enum: CorrectionReason, example: CorrectionReason.DIAGNOSTIC_REVISION })
+  @ApiPropertyOptional({ enum: CorrectionReason, example: CorrectionReason.DIAGNOSTIC_REVISION })
+  @IsOptional()
   @IsEnum(CorrectionReason)
-  reason: CorrectionReason;
+  reason?: CorrectionReason;
 
   @ApiPropertyOptional({ example: 'Sputum culture confirmed bacterial etiology' })
   @IsOptional()
   @IsString()
   justificationNotes?: string;
 
-  @ApiProperty({ example: 'primaryDiagnosisDescription' })
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  fieldModified: string;
+  amendmentReason?: string;
 
-  @ApiProperty({ example: 'Bacterial lobar pneumonia' })
+  @ApiPropertyOptional({ example: 'primaryDiagnosisDescription' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  correctedValue: string;
+  fieldModified?: string;
+
+  @ApiPropertyOptional({ example: 'Bacterial lobar pneumonia' })
+  @IsOptional()
+  @IsString()
+  correctedValue?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  primaryDiagnosisDescription?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  primaryDiagnosisCode?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  treatmentPlan?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  chiefComplaint?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  physicalExamination?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  vitalSigns?: any;
 }
 

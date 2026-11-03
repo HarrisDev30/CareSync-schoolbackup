@@ -38,9 +38,14 @@ export class AuditInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: (data) => {
+          // Resolve authenticated user from request or login response payload
+          const resolvedUser = user || data?.data?.user || data?.user;
+          const resolvedUserId = resolvedUser?.id || null;
+          const resolvedRole = resolvedUser?.role || 'ANONYMOUS';
+
           // Asynchronously record success audit event
           this.auditLogService.logAction({
-            userId: user?.id || null,
+            userId: resolvedUserId,
             action: auditMeta.action,
             resourceEntity: auditMeta.resource,
             resourceId: resourceId || data?.id || data?.data?.id || null,
@@ -49,7 +54,8 @@ export class AuditInterceptor implements NestInterceptor {
             details: {
               method: request.method,
               url: request.url,
-              role: user?.role || 'ANONYMOUS',
+              role: resolvedRole,
+              email: resolvedUser?.email || request.body?.email || undefined,
             },
           }).catch((err) => {
             this.logger.error(`Audit logging failed: ${err.message}`);

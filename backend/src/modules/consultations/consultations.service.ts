@@ -13,7 +13,7 @@ import {
   UpdateConsultationDto,
   CreateCorrectionDto,
 } from './dto/consultation.dto';
-import { ConsultationStatus } from '../../common/constants/enums';
+import { ConsultationStatus, CorrectionReason } from '../../common/constants/enums';
 
 @Injectable()
 export class ConsultationsService {
@@ -148,23 +148,46 @@ export class ConsultationsService {
 
       // Freeze current snapshot before applying amendment
       const previousSnapshot = { ...consultation };
-      const originalValue = String(consultation[dto.fieldModified] || '');
+
+      const fieldModified =
+        dto.fieldModified ||
+        (dto.primaryDiagnosisDescription ? 'primaryDiagnosisDescription' : 'treatmentPlan');
+      const originalValue = String((consultation as any)[fieldModified] || '');
+      const correctedValue =
+        dto.correctedValue ||
+        String(
+          (dto as any)[fieldModified] ||
+            dto.primaryDiagnosisDescription ||
+            dto.treatmentPlan ||
+            '',
+        );
+      const reason = dto.reason || CorrectionReason.DIAGNOSTIC_REVISION;
+      const justificationNotes =
+        dto.justificationNotes || dto.amendmentReason || 'Clinical amendment submitted';
 
       const correction = queryRunner.manager.create(ConsultationCorrection, {
         consultationId: id,
         correctedById: physicianId,
-        reason: dto.reason,
-        justificationNotes: dto.justificationNotes,
-        fieldModified: dto.fieldModified,
+        reason,
+        justificationNotes,
+        fieldModified,
         originalValue,
-        correctedValue: dto.correctedValue,
+        correctedValue,
         previousSnapshot,
       });
 
       const savedCorrection = await queryRunner.manager.save(correction);
 
       // Apply amended value and update status to AMENDED
-      consultation[dto.fieldModified] = dto.correctedValue;
+      if (dto.fieldModified && dto.correctedValue) {
+        (consultation as any)[dto.fieldModified] = dto.correctedValue;
+      }
+      if (dto.primaryDiagnosisDescription) consultation.primaryDiagnosisDescription = dto.primaryDiagnosisDescription;
+      if (dto.primaryDiagnosisCode) consultation.primaryDiagnosisCode = dto.primaryDiagnosisCode;
+      if (dto.treatmentPlan) consultation.treatmentPlan = dto.treatmentPlan;
+      if (dto.chiefComplaint) consultation.chiefComplaint = dto.chiefComplaint;
+      if (dto.vitalSigns) consultation.vitalSigns = dto.vitalSigns;
+
       consultation.status = ConsultationStatus.AMENDED;
 
       const updatedConsultation = await queryRunner.manager.save(consultation);

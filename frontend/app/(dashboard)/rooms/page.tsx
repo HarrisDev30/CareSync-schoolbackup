@@ -86,17 +86,32 @@ export default function RoomsPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [roomData, patData] = await Promise.all([
-        fetchHospitalRooms(),
-        fetchPatients(),
-      ]);
+      const roomData = await fetchHospitalRooms();
       setRooms(roomData);
-      setPatients(patData);
     } catch {
       // fallback
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const ensurePatientsLoaded = async () => {
+    if (patients.length === 0) {
+      try {
+        const patData = await fetchPatients();
+        setPatients(patData);
+        return patData;
+      } catch {
+        return [];
+      }
+    }
+    return patients;
+  };
+
+  const handleOpenAssign = async (roomNumber?: string) => {
+    await ensurePatientsLoaded();
+    setTargetAssignRoom(roomNumber);
+    setIsAssignModalOpen(true);
   };
 
   useEffect(() => {
@@ -193,9 +208,10 @@ export default function RoomsPage() {
     }
   };
 
-  const handleOpenPatientChart = (patientId?: string, mrn?: string) => {
+  const handleOpenPatientChart = async (patientId?: string, mrn?: string) => {
     if (!patientId && !mrn) return;
-    const found = patients.find((p) => p.id === patientId || p.mrn === mrn);
+    const currentPatients = await ensurePatientsLoaded();
+    const found = currentPatients.find((p) => p.id === patientId || p.mrn === mrn);
     if (found) {
       setSelectedChartPatient(found);
     }
@@ -301,10 +317,7 @@ export default function RoomsPage() {
           ) : (
             <Button
               size="sm"
-              onClick={() => {
-                setTargetAssignRoom(undefined);
-                setIsAssignModalOpen(true);
-              }}
+              onClick={() => handleOpenAssign()}
               className="gap-2 h-10 px-4 cursor-pointer active:scale-[0.98] transition-transform bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium shadow-xs"
             >
               <UserPlus className="w-4 h-4" />
@@ -838,10 +851,7 @@ export default function RoomsPage() {
                           ) : (
                             <Button
                               size="sm"
-                              onClick={() => {
-                                setTargetAssignRoom(room.roomNumber);
-                                setIsAssignModalOpen(true);
-                              }}
+                              onClick={() => handleOpenAssign(room.roomNumber)}
                               className="w-full h-8 text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
                             >
                               <UserPlus className="size-3.5" />

@@ -23,8 +23,9 @@ import {
   Flame,
   Check,
   Loader2,
+  UserCheck,
 } from 'lucide-react';
-import { LabOrder, DiagnosticPriority, DiagnosticStatus, Patient, CreateDiagnosticOrderInput, LabResultItem } from '@/types';
+import { LabOrder, DiagnosticPriority, DiagnosticStatus, Patient, CreateDiagnosticOrderInput, LabResultItem, StaffUser } from '@/types';
 import {
   fetchLabOrders,
   fetchPatients,
@@ -33,6 +34,9 @@ import {
   submitDiagnosticResult,
   verifyDiagnosticResult,
   reviewDiagnosticResult,
+  getActiveStaffUser,
+  setActiveStaffUser,
+  STAFF_PRESETS,
 } from '@/lib/api';
 import { CommandMenu } from '@/components/command-menu';
 import {
@@ -76,6 +80,8 @@ export default function LabsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [mounted, setMounted] = useState(false);
+  const [currentUser, setCurrentUser] = useState<StaffUser>(getActiveStaffUser());
 
   // Active modals
   const [selectedOrderForFindings, setSelectedOrderForFindings] = useState<LabOrder | null>(null);
@@ -111,7 +117,21 @@ export default function LabsPage() {
   };
 
   useEffect(() => {
+    setMounted(true);
     loadData();
+    setCurrentUser(getActiveStaffUser());
+
+    const handleSyncUser = () => {
+      setCurrentUser(getActiveStaffUser());
+    };
+    window.addEventListener('storage', handleSyncUser);
+    window.addEventListener('focus', handleSyncUser);
+    window.addEventListener('caresync_user_changed', handleSyncUser);
+    return () => {
+      window.removeEventListener('storage', handleSyncUser);
+      window.removeEventListener('focus', handleSyncUser);
+      window.removeEventListener('caresync_user_changed', handleSyncUser);
+    };
   }, []);
 
   // Handlers
@@ -660,24 +680,46 @@ export default function LabsPage() {
                       <TableCell className="pr-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
                           {isPendingCollection ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleMarkCollected(order)}
-                              className="text-xs h-8 px-3 border-border hover:bg-muted font-medium cursor-pointer"
-                            >
-                              <FlaskConical className="size-3.5 mr-1.5 text-purple-500" />
-                              <span>Collect Specimen</span>
-                            </Button>
+                            mounted && mounted && mounted && currentUser.role === 'LABORATORY_USER' ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleMarkCollected(order)}
+                                className="text-xs h-8 px-3 border-border hover:bg-muted font-medium cursor-pointer"
+                              >
+                                <FlaskConical className="size-3.5 mr-1.5 text-purple-500" />
+                                <span>Collect Specimen</span>
+                              </Button>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-xs text-purple-600 dark:text-purple-400 bg-purple-500/10 border-purple-500/30 py-1 px-2.5 font-medium flex items-center gap-1"
+                                title="Specimen intake requires Laboratory Personnel"
+                              >
+                                <Clock className="size-3" />
+                                <span>Pending Lab Intake</span>
+                              </Badge>
+                            )
                           ) : isAwaitingResults ? (
-                            <Button
-                              size="sm"
-                              onClick={() => setSelectedOrderForEntry(order)}
-                              className="text-xs h-8 px-3 gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
-                            >
-                              <Plus className="size-3.5" />
-                              <span>Input Findings</span>
-                            </Button>
+                            currentUser.role === 'LABORATORY_USER' ? (
+                              <Button
+                                size="sm"
+                                onClick={() => setSelectedOrderForEntry(order)}
+                                className="text-xs h-8 px-3 gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 font-medium"
+                              >
+                                <Plus className="size-3.5" />
+                                <span>Input Findings</span>
+                              </Button>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/30 py-1 px-2.5 font-medium flex items-center gap-1"
+                                title="Entering diagnostic findings requires Laboratory Personnel"
+                              >
+                                <Clock className="size-3" />
+                                <span>Awaiting Lab Analysis</span>
+                              </Badge>
+                            )
                           ) : (
                             <Button
                               variant="outline"
@@ -686,7 +728,7 @@ export default function LabsPage() {
                               className="text-xs text-foreground hover:bg-muted h-8 px-3 cursor-pointer font-medium border-border"
                             >
                               <Eye className="size-3.5 mr-1.5 text-muted-foreground" />
-                              <span>{isResulted ? 'Verify & Sign' : 'View Findings'}</span>
+                              <span>{isResulted && currentUser.role === 'LABORATORY_USER' ? 'Verify & Sign' : 'View Findings'}</span>
                             </Button>
                           )}
                         </div>

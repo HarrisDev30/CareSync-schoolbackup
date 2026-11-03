@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Pill,
   FileCheck,
+  Lock,
 } from 'lucide-react';
 import {
   Patient,
@@ -32,6 +33,7 @@ import {
   CreateConsultationInput,
   PatientMedication,
   DischargeSummary,
+  StaffUser,
 } from '@/types';
 import {
   Dialog,
@@ -65,6 +67,7 @@ import {
   createPrescription,
   dischargePatient,
   getStoredDischargeSummary,
+  getActiveStaffUser,
 } from '@/lib/api';
 import { evaluatePrescriptionSafety, CdsEvaluationResult } from '@/lib/cds-engine';
 import { MedicalRecordExportModal } from '@/components/medical-record-export-modal';
@@ -234,6 +237,26 @@ export function PatientChartModal({
   const [temperature, setTemperature] = useState('36.8');
   const [respiratoryRate, setRespiratoryRate] = useState('16');
   const [weightKg, setWeightKg] = useState('68.5');
+
+  // Active Authenticated User & RBAC Authorization
+  const [mounted, setMounted] = useState(false);
+  const [currentUser, setCurrentUser] = useState<StaffUser>(getActiveStaffUser());
+
+  useEffect(() => {
+    setMounted(true);
+    const syncUser = () => setCurrentUser(getActiveStaffUser());
+    syncUser();
+    window.addEventListener('storage', syncUser);
+    window.addEventListener('focus', syncUser);
+    window.addEventListener('caresync_user_changed', syncUser);
+    return () => {
+      window.removeEventListener('storage', syncUser);
+      window.removeEventListener('focus', syncUser);
+      window.removeEventListener('caresync_user_changed', syncUser);
+    };
+  }, []);
+
+  const isPhysician = mounted && currentUser.role === 'PHYSICIAN';
 
   // Safe Medical Record Correction / Addendum State [FE-602]
   const [amendingNoteId, setAmendingNoteId] = useState<string | null>(null);
@@ -733,14 +756,16 @@ export function PatientChartModal({
                     Legally signed clinical progress notes, diagnoses, and medical treatment plans.
                   </p>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => setActiveTab('soap')}
-                  className="h-8 text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  <Plus className="size-3.5" />
-                  <span>Start New SOAP Note</span>
-                </Button>
+                {isPhysician && (
+                  <Button
+                    size="sm"
+                    onClick={() => setActiveTab('soap')}
+                    className="h-8 text-xs gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    <Plus className="size-3.5" />
+                    <span>Start New SOAP Note</span>
+                  </Button>
+                )}
               </div>
 
               {isLoadingNotes ? (
@@ -760,14 +785,20 @@ export function PatientChartModal({
                       There are no signed or draft clinical encounters on file for {patient.fullName}.
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    onClick={() => setActiveTab('soap')}
-                    className="h-8 text-xs gap-1.5 cursor-pointer"
-                  >
-                    <FileSignature className="size-3.5" />
-                    <span>Create Initial SOAP Note</span>
-                  </Button>
+                  {isPhysician ? (
+                    <Button
+                      size="sm"
+                      onClick={() => setActiveTab('soap')}
+                      className="h-8 text-xs gap-1.5 cursor-pointer"
+                    >
+                      <FileSignature className="size-3.5" />
+                      <span>Create Initial SOAP Note</span>
+                    </Button>
+                  ) : (
+                    <Badge variant="outline" className="text-xs text-muted-foreground font-mono py-1 px-2.5">
+                      SOAP Notes Restricted to Attending Physicians
+                    </Badge>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1155,6 +1186,25 @@ export function PatientChartModal({
             {/* TAB 2: NEW CLINICAL SOAP ENCOUNTER (ENTRY FORM) */}
             {/* ======================================================== */}
             <TabsContent value="soap" className="mt-0 space-y-4">
+              {!isPhysician ? (
+                <div className="p-10 border border-dashed border-border rounded-xl text-center space-y-3 bg-muted/20 my-6">
+                  <div className="size-12 rounded-full bg-muted flex items-center justify-center mx-auto text-muted-foreground">
+                    <Lock className="size-6 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">
+                      Attending Physician Authorization Required
+                    </p>
+                    <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+                      Clinical SOAP encounters, diagnostic assessment formulation, and medical chart finalization are strictly restricted to licensed Attending Physicians (Dr. Sarah Chen / Dr. Marcus Vance).
+                    </p>
+                    <p className="text-[11px] font-mono text-muted-foreground pt-1">
+                      Current Terminal: <strong>{currentUser.fullName}</strong> ({currentUser.role})
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <>
               {/* Physician & Setting Selector */}
               <div className="p-3.5 bg-muted/30 rounded-xl border border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-3">
@@ -1403,6 +1453,8 @@ export function PatientChartModal({
                   </Button>
                 </div>
               </div>
+                </>
+              )}
             </TabsContent>
 
             {/* ======================================================== */}
@@ -1715,6 +1767,17 @@ export function PatientChartModal({
               </div>
 
               {/* 2. ISSUE NEW E-PRESCRIPTION FORM */}
+              {!isPhysician ? (
+                <div className="border border-border rounded-xl p-5 bg-muted/20 text-center space-y-1.5 shadow-xs">
+                  <div className="flex items-center justify-center gap-2 text-xs font-semibold text-foreground">
+                    <Lock className="size-3.5 text-muted-foreground" />
+                    <span>Prescription Issuance Authority Restricted</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+                    Only licensed Attending Physicians may author electronic pharmacotherapy prescriptions (e-Rx). Non-physician personnel operate in read-only formulary mode.
+                  </p>
+                </div>
+              ) : (
               <div className="border border-border rounded-xl p-4 bg-muted/20 shadow-xs space-y-4">
                 <div className="border-b border-border/80 pb-2.5">
                   <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
@@ -1907,6 +1970,7 @@ export function PatientChartModal({
                   </div>
                 </form>
               </div>
+              )}
 
               {/* 3. PATIENT DISCHARGE SUMMARY & CLINICAL DISPOSITION */}
               <div className="border border-border rounded-xl p-4 bg-card shadow-xs space-y-4">
@@ -1977,6 +2041,16 @@ export function PatientChartModal({
                         <span>Export Certified Discharge EHR Record</span>
                       </Button>
                     </div>
+                  </div>
+                ) : !isPhysician ? (
+                  <div className="border border-border rounded-xl p-5 bg-muted/20 text-center space-y-1.5 shadow-xs">
+                    <div className="flex items-center justify-center gap-2 text-xs font-semibold text-foreground">
+                      <Lock className="size-3.5 text-muted-foreground" />
+                      <span>Clinical Discharge Authority Restricted</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+                      Formal clinical discharge and patient transition orders must be authorized by an Attending Physician.
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-4">

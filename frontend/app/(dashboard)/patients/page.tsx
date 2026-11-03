@@ -15,8 +15,8 @@ import { PatientKpiGrid } from './_components/patient-kpi-grid';
 import { PatientRegistrationModal } from './_components/patient-registration-modal';
 import { PatientChartModal } from './_components/patient-chart-modal';
 import { CommandMenu } from '@/components/command-menu';
-import { fetchPatients, createPatient } from '@/lib/api';
-import { Patient, CreatePatientInput } from '@/types';
+import { fetchPatients, createPatient, getActiveStaffUser } from '@/lib/api';
+import { Patient, CreatePatientInput, StaffUser } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -46,7 +46,23 @@ export default function PatientsPage() {
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const [selectedChartPatient, setSelectedChartPatient] = useState<Patient | null>(null);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [currentUser, setCurrentUser] = useState<StaffUser>(getActiveStaffUser());
   const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    setMounted(true);
+    const handleSync = () => setCurrentUser(getActiveStaffUser());
+    handleSync();
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('focus', handleSync);
+    window.addEventListener('caresync_user_changed', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('focus', handleSync);
+      window.removeEventListener('caresync_user_changed', handleSync);
+    };
+  }, []);
 
   const loadPatients = async (search?: string, bloodType?: string) => {
     const data = await fetchPatients(search, bloodType === 'ALL' ? undefined : bloodType);
@@ -169,14 +185,16 @@ export default function PatientsPage() {
             </Link>
           </Button>
 
-          <Button
-            onClick={() => setIsRegisterModalOpen(true)}
-            size="sm"
-            className="gap-2 h-10 px-4 cursor-pointer active:scale-[0.98] transition-transform bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>Register Walk-In</span>
-          </Button>
+          {mounted && (currentUser.role === 'RECEPTIONIST' || currentUser.role === 'ADMINISTRATOR') && (
+            <Button
+              onClick={() => setIsRegisterModalOpen(true)}
+              size="sm"
+              className="gap-2 h-10 px-4 cursor-pointer active:scale-[0.98] transition-transform bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>Register Walk-In</span>
+            </Button>
+          )}
         </div>
       </div>
 
